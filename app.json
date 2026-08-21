@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Dodla Sales & Billing",
+    "slug": "dodla",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/kalyani_enterprise_logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/kalyani_enterprise_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kalyanienterprises.dodla"
+    },
+    "android": {
+      "package": "com.kalyanienterprises.dodla",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/kalyani_enterprise_logo.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sharing"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bf815917-7d0a-40b7-9684-a108af3f42f7"
+      }
+    },
+    "owner": "gramaone2021s-team"
+  }
+}
