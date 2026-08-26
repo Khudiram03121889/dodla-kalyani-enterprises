@@ -16,8 +16,8 @@ interface StoreContextType {
   deleteRoute: (id: string) => Promise<void>;
   addShop: (shop: Omit<Shop, 'id' | 'created_at'>) => Promise<Shop>;
   deleteShop: (id: string) => Promise<void>;
-  addCategory: (name: string) => Promise<Category>;
-  updateCategory: (id: string, name: string) => Promise<void>;
+  addCategory: (name: string, hsnCode?: string) => Promise<Category>;
+  updateCategory: (id: string, name: string, hsnCode?: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   addProduct: (product: Omit<Product, 'id' | 'created_at'>) => Promise<Product>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
@@ -107,11 +107,11 @@ const SEED_SHOPS: Shop[] = [
 ];
 
 const SEED_CATEGORIES: Category[] = [
-  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Dodla Milk & Curd', display_order: 1 },
-  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Dodla Ghee & Butter', display_order: 2 },
-  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Dodla Paneer & Sweets', display_order: 3 },
-  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Dodla Flavoured Milk', display_order: 4 },
-  { id: 'c0000000-0000-0000-0000-000000000005', name: 'Beverages & Dairy Snacks', display_order: 5 },
+  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Dodla Milk & Curd', hsn_code: '04012000', display_order: 1 },
+  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Dodla Ghee & Butter', hsn_code: '04059020', display_order: 2 },
+  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Dodla Paneer & Sweets', hsn_code: '21069099', display_order: 3 },
+  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Dodla Flavoured Milk', hsn_code: '22029990', display_order: 4 },
+  { id: 'c0000000-0000-0000-0000-000000000005', name: 'Beverages & Dairy Snacks', hsn_code: '04039010', display_order: 5 },
 ];
 
 const SEED_PRODUCTS: Product[] = [];
@@ -421,15 +421,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(updated));
   };
 
-  const addCategory = async (name: string): Promise<Category> => {
+  const addCategory = async (name: string, hsnCode?: string): Promise<Category> => {
     const trimmed = name.trim();
     if (!trimmed) {
       throw new Error('Category name cannot be empty.');
     }
 
+    const trimmedHsn = hsnCode?.trim() || '04012000';
+
     const newCat: Category = {
       id: generateUUID(),
       name: trimmed,
+      hsn_code: trimmedHsn,
       display_order: categories.length + 1,
       created_at: new Date().toISOString(),
     };
@@ -438,7 +441,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         const { data, error } = await supabase
           .from('dodla_categories')
-          .insert([{ id: newCat.id, name: trimmed, display_order: newCat.display_order }])
+          .insert([{
+            id: newCat.id,
+            name: trimmed,
+            hsn_code: trimmedHsn,
+            display_order: newCat.display_order,
+          }])
           .select()
           .single();
         if (error) {
@@ -448,6 +456,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (data) {
           newCat.id = data.id;
           newCat.created_at = data.created_at;
+          newCat.hsn_code = data.hsn_code;
         }
       } catch (e: any) {
         console.error('addCategory error:', e);
@@ -461,21 +470,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return newCat;
   };
 
-  const updateCategory = async (id: string, name: string): Promise<void> => {
+  const updateCategory = async (id: string, name: string, hsnCode?: string): Promise<void> => {
     const trimmed = name.trim();
     if (!trimmed) {
       throw new Error('Category name cannot be empty.');
     }
 
+    const updates: { name: string; hsn_code?: string } = { name: trimmed };
+    if (hsnCode !== undefined) {
+      updates.hsn_code = hsnCode.trim();
+    }
+
     if (isSupabaseConfigured() && supabase) {
-      const { error } = await supabase.from('dodla_categories').update({ name: trimmed }).eq('id', id);
+      const { error } = await supabase.from('dodla_categories').update(updates).eq('id', id);
       if (error) {
         console.error('Supabase category update error:', error);
         throw new Error(error.message || 'Failed to update category in database');
       }
     }
 
-    const updated = categories.map((c) => (c.id === id ? { ...c, name: trimmed } : c));
+    const updated = categories.map((c) => (c.id === id ? { ...c, ...updates } : c));
     setCategories(updated);
     await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated));
   };
@@ -599,6 +613,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const lineTaxable = Number((item.qty * item.product.rate).toFixed(2));
       const lineGst = Number(((lineTaxable * (item.product.gst_rate || 5.0)) / 100).toFixed(2));
       const matchedCat = categories.find((c) => c.id === item.product.category_id);
+      const effectiveHsn = item.product.hsn_code?.trim() || matchedCat?.hsn_code?.trim() || '04012000';
 
       return {
         id: generateUUID(),
@@ -606,7 +621,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         product_id: item.product.id,
         product_name: item.product.name,
         category_name: matchedCat?.name || 'General',
-        hsn_code: item.product.hsn_code,
+        hsn_code: effectiveHsn,
         qty: item.qty,
         rate: item.product.rate,
         amount: lineTaxable,
@@ -677,6 +692,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           product_id: oi.product_id,
           product_name: oi.product_name,
           category_name: oi.category_name,
+          hsn_code: oi.hsn_code,
           qty: oi.qty,
           rate: oi.rate,
           taxable_amount: oi.taxable_amount,
@@ -748,6 +764,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const lineTaxable = Number((item.qty * item.product.rate).toFixed(2));
       const lineGst = Number(((lineTaxable * (item.product.gst_rate || 5.0)) / 100).toFixed(2));
       const matchedCat = categories.find((c) => c.id === item.product.category_id);
+      const effectiveHsn = item.product.hsn_code?.trim() || matchedCat?.hsn_code?.trim() || '04012000';
 
       return {
         id: generateUUID(),
@@ -755,7 +772,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         product_id: item.product.id,
         product_name: item.product.name,
         category_name: matchedCat?.name || 'General',
-        hsn_code: item.product.hsn_code,
+        hsn_code: effectiveHsn,
         qty: item.qty,
         rate: item.product.rate,
         amount: lineTaxable,
@@ -831,6 +848,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           product_id: oi.product_id,
           product_name: oi.product_name,
           category_name: oi.category_name,
+          hsn_code: oi.hsn_code,
           qty: oi.qty,
           rate: oi.rate,
           taxable_amount: oi.taxable_amount,

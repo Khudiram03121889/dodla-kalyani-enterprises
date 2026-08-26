@@ -34,6 +34,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const getHsnForCategory = (catId: string): string => {
     const cat = categories.find((c) => c.id === catId);
     if (!cat) return '04012000';
+    if (cat.hsn_code) return cat.hsn_code;
     const catName = cat.name.toLowerCase();
     if (catName.includes('milk') || catName.includes('curd')) return '04012000';
     if (catName.includes('ghee') || catName.includes('butter')) return '04059020';

@@ -24,9 +24,11 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 }) => {
   const { categories, products, addCategory, updateCategory, deleteCategory } = useStore();
   const [newCatName, setNewCatName] = useState('');
+  const [newCatHsn, setNewCatHsn] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editingCatName, setEditingCatName] = useState('');
+  const [editingCatHsn, setEditingCatHsn] = useState('');
 
   const handleAddCategory = async () => {
     const trimmed = newCatName.trim();
@@ -37,8 +39,9 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      await addCategory(trimmed);
+      await addCategory(trimmed, newCatHsn.trim() || undefined);
       setNewCatName('');
+      setNewCatHsn('');
       setIsSubmitting(false);
       Alert.alert('Category Added', `"${trimmed}" has been created and synced with database.`);
     } catch (e: any) {
@@ -50,6 +53,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const startEdit = (cat: Category) => {
     setEditingCatId(cat.id);
     setEditingCatName(cat.name);
+    setEditingCatHsn(cat.hsn_code || '');
   };
 
   const handleSaveEdit = async () => {
@@ -62,11 +66,12 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      await updateCategory(editingCatId, trimmed);
+      await updateCategory(editingCatId, trimmed, editingCatHsn.trim());
       setEditingCatId(null);
       setEditingCatName('');
+      setEditingCatHsn('');
       setIsSubmitting(false);
-      Alert.alert('Success', `Category renamed to "${trimmed}".`);
+      Alert.alert('Success', `Category updated successfully.`);
     } catch (e: any) {
       setIsSubmitting(false);
       Alert.alert('Failed to Update', e.message || 'Error occurred while updating in database.');
@@ -128,11 +133,19 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           {/* Add Category Bar */}
           <View style={styles.addRow}>
             <TextInput
-              style={styles.input}
-              placeholder="New Category Name..."
+              style={[styles.input, { flex: 2 }]}
+              placeholder="Category Name..."
               placeholderTextColor="#9CA3AF"
               value={newCatName}
               onChangeText={setNewCatName}
+            />
+            <TextInput
+              style={[styles.input, { flex: 1.2 }]}
+              placeholder="HSN (e.g. 04012000)"
+              placeholderTextColor="#9CA3AF"
+              value={newCatHsn}
+              onChangeText={setNewCatHsn}
+              keyboardType="number-pad"
             />
             <TouchableOpacity
               style={[styles.addBtn, isSubmitting && styles.btnDisabled]}
@@ -152,12 +165,20 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
             <View style={styles.editRow}>
               <Text style={styles.editLabel}>Editing:</Text>
               <TextInput
-                style={[styles.input, styles.editInput]}
+                style={[styles.input, styles.editInput, { flex: 2 }]}
                 value={editingCatName}
                 onChangeText={setEditingCatName}
                 placeholder="Category name"
                 placeholderTextColor="#9CA3AF"
                 autoFocus
+              />
+              <TextInput
+                style={[styles.input, styles.editInput, { flex: 1.2 }]}
+                value={editingCatHsn}
+                onChangeText={setEditingCatHsn}
+                placeholder="HSN Code"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
               />
               <TouchableOpacity
                 style={styles.saveEditBtn}
@@ -192,7 +213,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                     <View>
                       <Text style={styles.catName}>{item.name}</Text>
                       <Text style={styles.catSub}>
-                        {productCount} item{productCount === 1 ? '' : 's'} assigned
+                        HSN: {item.hsn_code || '04012000'} • {productCount} item{productCount === 1 ? '' : 's'} assigned
                       </Text>
                     </View>
                   </View>

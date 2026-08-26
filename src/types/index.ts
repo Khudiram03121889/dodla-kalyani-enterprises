@@ -29,6 +29,7 @@ export interface Shop {
 export interface Category {
   id: string;
   name: string;
+  hsn_code?: string;
   display_order?: number;
   created_at?: string;
 }

@@ -14,6 +14,27 @@ function escapeHtml(str?: string | null): string {
     .replace(/'/g, '&#039;');
 }
 
+const CATEGORY_HSN_MAP: Record<string, string> = {
+  'dodla milk & curd': '04012000',
+  'dodla ghee & butter': '04059020',
+  'dodla paneer & sweets': '21069099',
+  'dodla flavoured milk': '22029990',
+  'beverages & dairy snacks': '04039010',
+};
+
+export function getCategoryHsn(catName?: string): string {
+  if (!catName) return '04012000';
+  const lower = catName.trim().toLowerCase();
+  if (CATEGORY_HSN_MAP[lower]) return CATEGORY_HSN_MAP[lower];
+  if (lower.includes('milk') || lower.includes('curd')) return '04012000';
+  if (lower.includes('ghee') || lower.includes('butter')) return '04059020';
+  if (lower.includes('paneer')) return '04061000';
+  if (lower.includes('sweet') || lower.includes('peda') || lower.includes('papdi') || lower.includes('jamun')) return '21069099';
+  if (lower.includes('flavour') || lower.includes('badam')) return '22029990';
+  if (lower.includes('beverage') || lower.includes('snack') || lower.includes('buttermilk')) return '04039010';
+  return '21069099';
+}
+
 function generateInvoiceBoxContent(order: Order): string {
   const formattedDate = formatDateTime(order.created_at);
 
@@ -30,13 +51,18 @@ function generateInvoiceBoxContent(order: Order): string {
       ? `
       <table class="category-table">
         <tr>
-          <th>ITEM</th>
+          <th style="width: 50px;">ITEM</th>
           ${categoryHeaders.map((cat) => `<th>${escapeHtml(cat.toUpperCase())}</th>`).join('')}
-          <th>TOTAL</th>
+          <th style="width: 50px;">TOTAL</th>
         </tr>
         <tr>
-          <td>QTY</td>
-          ${categoryHeaders.map((cat) => `<td>${categoryQtyMap[cat]}</td>`).join('')}
+          <td style="font-weight: bold; background: #fafafa; font-size: 8px;">HSN</td>
+          ${categoryHeaders.map((cat) => `<td style="font-weight: bold; font-size: 8px;">${getCategoryHsn(cat)}</td>`).join('')}
+          <td style="font-weight: bold; font-size: 8px;">-</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold;">QTY</td>
+          ${categoryHeaders.map((cat) => `<td style="font-weight: bold;">${categoryQtyMap[cat]}</td>`).join('')}
           <td><strong>${order.total_qty}</strong></td>
         </tr>
       </table>
@@ -48,10 +74,8 @@ function generateInvoiceBoxContent(order: Order): string {
       (item, idx) => `
       <tr>
         <td style="text-align: center;">${idx + 1}</td>
-        <td style="text-align: left;">
-          ${escapeHtml(item.product_name)}
-          ${item.hsn_code && !item.product_name.includes(item.hsn_code) ? ` ( ${escapeHtml(item.hsn_code)} )` : ''}
-        </td>
+        <td style="text-align: left;"><strong>${escapeHtml(item.product_name)}</strong></td>
+        <td style="text-align: center; font-size: 8.5px; font-weight: bold;">${escapeHtml(item.hsn_code || getCategoryHsn(item.category_name))}</td>
         <td style="text-align: center;">${item.qty}</td>
         <td style="text-align: right;">${item.rate.toFixed(2)}</td>
         <td style="text-align: right;">${(item.qty * item.rate).toFixed(2)}</td>
@@ -126,21 +150,22 @@ function generateInvoiceBoxContent(order: Order): string {
     <table class="items-table">
       <thead>
         <tr>
-          <th style="width: 25px;">Sr. No.</th>
+          <th style="width: 22px;">Sr. No.</th>
           <th>Product Name</th>
-          <th style="width: 30px;">Qty</th>
-          <th style="width: 48px;">Rate</th>
-          <th style="width: 52px;">Amount</th>
-          <th style="width: 56px;">Taxable Amt.</th>
-          <th style="width: 32px;">GST %</th>
-          <th style="width: 48px;">GST Amt</th>
-          <th style="width: 56px;">Total</th>
+          <th style="width: 58px;">HSN Code</th>
+          <th style="width: 28px;">Qty</th>
+          <th style="width: 44px;">Rate</th>
+          <th style="width: 48px;">Amount</th>
+          <th style="width: 52px;">Taxable Amt.</th>
+          <th style="width: 30px;">GST %</th>
+          <th style="width: 44px;">GST Amt</th>
+          <th style="width: 52px;">Total</th>
         </tr>
       </thead>
       <tbody>
         ${itemRowsHtml}
         <tr style="font-weight: bold; background: #fafafa;">
-          <td colspan="2" style="text-align: right;">TOTAL:</td>
+          <td colspan="3" style="text-align: right;">TOTAL:</td>
           <td style="text-align: center;">${order.total_qty}</td>
           <td></td>
           <td style="text-align: right;">₹${order.taxable_amount.toFixed(2)}</td>

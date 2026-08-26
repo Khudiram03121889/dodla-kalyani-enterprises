@@ -14,6 +14,7 @@ import { useStore } from '../../context/StoreContext';
 import { Order } from '../../types';
 import { COMPANY_DETAILS } from '../../config/constants';
 import { printInvoice, shareInvoicePdf } from '../../services/printService';
+import { getCategoryHsn } from '../../services/pdfGenerator';
 import { numberToWordsIndian } from '../../utils/taxCalculator';
 import { formatDateTime, formatCurrency } from '../../utils/formatters';
 
@@ -210,8 +211,11 @@ export const InvoicePreviewScreen: React.FC = () => {
               <View key={item.id} style={styles.tableRow}>
                 <Text style={[styles.td, { width: 24, textAlign: 'center' }]}>{idx + 1}</Text>
                 <Text style={[styles.td, { flex: 2.2, textAlign: 'left' }]}>
-                  {item.product_name}
-                  {item.hsn_code && !item.product_name.includes(item.hsn_code) ? ` ( ${item.hsn_code} )` : ''}
+                  <Text style={{ fontWeight: 'bold' }}>{item.product_name}</Text>
+                  {'\n'}
+                  <Text style={{ fontSize: 9, color: '#4B5563', fontWeight: '600' }}>
+                    HSN: {item.hsn_code || getCategoryHsn(item.category_name)}
+                  </Text>
                 </Text>
                 <Text style={[styles.td, { width: 28, textAlign: 'center' }]}>{item.qty}</Text>
                 <Text style={[styles.td, { width: 44, textAlign: 'right' }]}>
@@ -272,8 +276,17 @@ export const InvoicePreviewScreen: React.FC = () => {
                 ))}
                 <Text style={styles.catBoxHeaderCell}>TOTAL</Text>
               </View>
+              <View style={[styles.catBoxRow, { backgroundColor: '#F9FAFB' }]}>
+                <Text style={[styles.catBoxCell, { fontWeight: 'bold', fontSize: 9.5 }]}>HSN</Text>
+                {Object.keys(categoryQtyMap).map((cat) => (
+                  <Text key={cat} style={[styles.catBoxCell, { fontWeight: 'bold', fontSize: 9, color: '#1E3A8A' }]}>
+                    {getCategoryHsn(cat)}
+                  </Text>
+                ))}
+                <Text style={[styles.catBoxCell, { fontWeight: 'bold' }]}>-</Text>
+              </View>
               <View style={styles.catBoxRow}>
-                <Text style={styles.catBoxCell}>QTY</Text>
+                <Text style={[styles.catBoxCell, { fontWeight: 'bold' }]}>QTY</Text>
                 {Object.keys(categoryQtyMap).map((cat) => (
                   <Text key={cat} style={styles.catBoxCell}>
                     {categoryQtyMap[cat]}
