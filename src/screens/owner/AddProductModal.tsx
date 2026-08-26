@@ -26,16 +26,37 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const { categories, addProduct } = useStore();
   const [categoryId, setCategoryId] = useState<string>(defaultCategoryId || '');
   const [name, setName] = useState('');
-  const [hsnCode, setHsnCode] = useState('21069099');
+  const [hsnCode, setHsnCode] = useState('');
   const [rate, setRate] = useState('');
   const [stockQty, setStockQty] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getHsnForCategory = (catId: string): string => {
+    const cat = categories.find((c) => c.id === catId);
+    if (!cat) return '';
+    const catName = cat.name.toLowerCase();
+    if (catName.includes('badam milk')) return '04029990';
+    if (catName.includes('soan papdi') || catName.includes('doodh pedha') || catName.includes('doodh peda')) return '21069099';
+    return '';
+  };
+
+  const handleSelectCategory = (catId: string) => {
+    setCategoryId(catId);
+    const autoHsn = getHsnForCategory(catId);
+    if (autoHsn) {
+      setHsnCode(autoHsn);
+    }
+  };
+
   React.useEffect(() => {
     if (defaultCategoryId && defaultCategoryId !== 'ALL') {
       setCategoryId(defaultCategoryId);
+      const autoHsn = getHsnForCategory(defaultCategoryId);
+      if (autoHsn) setHsnCode(autoHsn);
     } else if (categories.length > 0 && !categoryId) {
       setCategoryId(categories[0].id);
+      const autoHsn = getHsnForCategory(categories[0].id);
+      if (autoHsn) setHsnCode(autoHsn);
     }
   }, [defaultCategoryId, categories]);
 
@@ -105,7 +126,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   <TouchableOpacity
                     key={c.id}
                     style={[styles.catPill, categoryId === c.id && styles.catPillActive]}
-                    onPress={() => setCategoryId(c.id)}
+                    onPress={() => handleSelectCategory(c.id)}
                   >
                     <Text
                       style={[

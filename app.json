@@ -29,11 +29,11 @@
     "plugins": [
       "expo-sharing"
     ],
+    "owner": "ahalya1974s-team",
     "extra": {
       "eas": {
-        "projectId": "bf815917-7d0a-40b7-9684-a108af3f42f7"
+        "projectId": "7ca7dc8d-dd80-4051-aec4-fd0fc384ebfe"
       }
-    },
-    "owner": "gramaone2021s-team"
+    }
   }
 }

@@ -1,7 +1,11 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Order, Route } from '../types';
-import { generateInvoiceHtml, generateRouteSummaryHtml } from './pdfGenerator';
+import {
+  generateInvoiceHtml,
+  generateRouteSummaryHtml,
+  generateCombinedInvoicesWithSummaryHtml,
+} from './pdfGenerator';
 import { Alert, Platform } from 'react-native';
 
 export async function printInvoice(order: Order): Promise<boolean> {
@@ -88,6 +92,56 @@ export async function shareRouteSummaryPdf(route: Route, orders: Order[]): Promi
   } catch (error) {
     console.error('Error sharing route summary:', error);
     Alert.alert('Export Error', 'Could not generate or share summary PDF.');
+    return false;
+  }
+}
+
+export async function printCombinedInvoicesPdf(
+  orders: Order[],
+  routeName?: string
+): Promise<boolean> {
+  try {
+    const html = generateCombinedInvoicesWithSummaryHtml(orders, routeName);
+    await Print.printAsync({
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error printing combined invoices:', error);
+    Alert.alert('Print Error', 'Could not open print dialog for combined invoices.');
+    return false;
+  }
+}
+
+export async function shareCombinedInvoicesPdf(
+  orders: Order[],
+  routeName?: string
+): Promise<boolean> {
+  try {
+    const html = generateCombinedInvoicesWithSummaryHtml(orders, routeName);
+    const { uri } = await Print.printToFileAsync({
+      html,
+    });
+
+    if (Platform.OS === 'web') {
+      window.open(uri, '_blank');
+      return true;
+    }
+
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(uri, {
+        UTI: 'com.adobe.pdf',
+        mimeType: 'application/pdf',
+        dialogTitle: `Share Combined Invoices (${orders.length} Invoices + Summary)`,
+      });
+      return true;
+    } else {
+      Alert.alert('Sharing Unavailable', 'Sharing is not available on this device.');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error sharing combined invoices PDF:', error);
+    Alert.alert('Export Error', 'Could not generate or share combined PDF.');
     return false;
   }
 }

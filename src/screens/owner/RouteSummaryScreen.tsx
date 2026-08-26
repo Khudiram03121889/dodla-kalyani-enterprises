@@ -5,10 +5,10 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useStore } from '../../context/StoreContext';
 import { COMPANY_DETAILS } from '../../config/constants';
@@ -16,6 +16,7 @@ import { printRouteSummary, shareRouteSummaryPdf } from '../../services/printSer
 import { formatDateTime, formatCurrency } from '../../utils/formatters';
 
 export const RouteSummaryScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { routes, orders } = useStore();
 
@@ -43,9 +44,14 @@ export const RouteSummaryScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Top Bar */}
-      <View style={styles.topBar}>
+      <View
+        style={[
+          styles.topBar,
+          { paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
@@ -80,7 +86,13 @@ export const RouteSummaryScreen: React.FC = () => {
       </View>
 
       {/* Summary Sheet Document Preview */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 120 + insets.bottom },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.documentCard}>
           {/* Document Header */}
           <View style={styles.docHeader}>
@@ -135,7 +147,12 @@ export const RouteSummaryScreen: React.FC = () => {
       </ScrollView>
 
       {/* Action Footer */}
-      <View style={styles.actionFooter}>
+      <View
+        style={[
+          styles.actionFooter,
+          { paddingBottom: Math.max(insets.bottom, 12) + 8 },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.btn, styles.shareBtn]}
           onPress={handleShare}
@@ -152,7 +169,7 @@ export const RouteSummaryScreen: React.FC = () => {
           <Text style={styles.printBtnText}>🖨️ Print Route Summary</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

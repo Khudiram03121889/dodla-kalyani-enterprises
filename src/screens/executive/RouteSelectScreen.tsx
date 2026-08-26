@@ -8,9 +8,9 @@ import {
   TextInput,
   Modal,
   Alert,
-  SafeAreaView,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
@@ -20,9 +20,10 @@ import { AddShopModal } from './AddShopModal';
 import { formatDate } from '../../utils/formatters';
 
 export const RouteSelectScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const { user, logout, switchRoleForDemo } = useAuth();
-  const { routes, shops, refreshData } = useStore();
+  const { user, logout } = useAuth();
+  const { routes, shops, orders, refreshData } = useStore();
 
   const [selectedRouteId, setSelectedRouteId] = useState<string>(
     routes.length > 0 ? routes[0].id : ''
@@ -32,6 +33,8 @@ export const RouteSelectScreen: React.FC = () => {
   const [addRouteModalVisible, setAddRouteModalVisible] = useState(false);
   const [addShopModalVisible, setAddShopModalVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const todayStr = formatDate(new Date());
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -70,9 +73,9 @@ export const RouteSelectScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: 14 }]}>
         <View>
           <Text style={styles.greeting}>Sales Executive</Text>
           <Text style={styles.userName}>{user?.full_name || 'Bharath Kumar'}</Text>
@@ -167,7 +170,10 @@ export const RouteSelectScreen: React.FC = () => {
           <FlatList
             data={filteredShops}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.shopList}
+            contentContainerStyle={[
+              styles.shopList,
+              { paddingBottom: Math.max(insets.bottom, 24) + 60 },
+            ]}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
@@ -177,45 +183,130 @@ export const RouteSelectScreen: React.FC = () => {
                 tintColor="#1E3A8A"
               />
             }
-            renderItem={({ item, index }) => (
-              <View style={styles.shopCard}>
-                <View style={styles.shopCardHeader}>
-                  <View style={styles.shopNumberBadge}>
-                    <Text style={styles.shopNumberText}>{index + 1}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.shopName}>{item.name}</Text>
-                    {item.incharge && (
-                      <Text style={styles.inchargeText}>Incharge: {item.incharge}</Text>
-                    )}
-                  </View>
-                </View>
+            renderItem={({ item, index }) => {
+              const isPunchedToday = orders.some(
+                (o) => o.shop_id === item.id && formatDate(o.created_at) === todayStr
+              );
 
-                <Text style={styles.shopAddress}>📍 {item.address}</Text>
-                <Text style={styles.shopPhone}>📞 +91 {item.phone}</Text>
-
-                <View style={styles.tagsRow}>
-                  {item.gstin ? (
-                    <View style={styles.tagBadge}>
-                      <Text style={styles.tagText}>GST: {item.gstin}</Text>
+              return (
+                <View style={[styles.shopCard, isPunchedToday && styles.shopCardPunched]}>
+                  <View style={styles.shopCardHeader}>
+                    <View
+                      style={[
+                        styles.shopNumberBadge,
+                        isPunchedToday && styles.shopNumberBadgePunched,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.shopNumberText,
+                          isPunchedToday && styles.shopNumberTextPunched,
+                        ]}
+                      >
+                        {isPunchedToday ? '✓' : index + 1}
+                      </Text>
                     </View>
-                  ) : null}
-                  {item.fssai ? (
-                    <View style={[styles.tagBadge, styles.fssaiBadge]}>
-                      <Text style={styles.fssaiTagText}>FSSAI: {item.fssai}</Text>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.shopTitleRow}>
+                        <Text
+                          style={[
+                            styles.shopName,
+                            isPunchedToday && styles.shopNamePunched,
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                        {isPunchedToday && (
+                          <View style={styles.punchedTodayTag}>
+                            <Text style={styles.punchedTodayTagText}>✓ Punched Today</Text>
+                          </View>
+                        )}
+                      </View>
+                      {item.incharge && (
+                        <Text
+                          style={[
+                            styles.inchargeText,
+                            isPunchedToday && styles.inchargeTextPunched,
+                          ]}
+                        >
+                          Incharge: {item.incharge}
+                        </Text>
+                      )}
                     </View>
-                  ) : null}
-                </View>
+                  </View>
 
-                <TouchableOpacity
-                  style={styles.punchBtn}
-                  onPress={() => handleSelectShop(item)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.punchBtnText}>⚡ Punch Order</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                  <Text
+                    style={[
+                      styles.shopAddress,
+                      isPunchedToday && styles.shopAddressPunched,
+                    ]}
+                  >
+                    📍 {item.address}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.shopPhone,
+                      isPunchedToday && styles.shopPhonePunched,
+                    ]}
+                  >
+                    📞 +91 {item.phone}
+                  </Text>
+
+                  <View style={styles.tagsRow}>
+                    {item.gstin ? (
+                      <View
+                        style={[
+                          styles.tagBadge,
+                          isPunchedToday && styles.tagBadgePunched,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.tagText,
+                            isPunchedToday && styles.tagTextPunched,
+                          ]}
+                        >
+                          GST: {item.gstin}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {item.fssai ? (
+                      <View
+                        style={[
+                          styles.tagBadge,
+                          styles.fssaiBadge,
+                          isPunchedToday && styles.fssaiBadgePunched,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.fssaiTagText,
+                            isPunchedToday && styles.fssaiTagTextPunched,
+                          ]}
+                        >
+                          FSSAI: {item.fssai}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.punchBtn, isPunchedToday && styles.punchBtnPunched]}
+                    onPress={() => handleSelectShop(item)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.punchBtnText,
+                        isPunchedToday && styles.punchBtnTextPunched,
+                      ]}
+                    >
+                      {isPunchedToday ? '⚡ Punch Order Again' : '⚡ Punch Order'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }}
           />
         )}
       </View>
@@ -266,20 +357,6 @@ export const RouteSelectScreen: React.FC = () => {
             <View style={styles.menuDivider} />
 
             <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuVisible(false);
-                switchRoleForDemo('owner');
-              }}
-            >
-              <Text style={styles.menuItemIcon}>👑</Text>
-              <View>
-                <Text style={styles.menuItemLabel}>Switch to Owner Mode</Text>
-                <Text style={styles.menuItemSub}>View Sales Dashboard & Godown Inventory</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={[styles.menuItem, styles.logoutItem]}
               onPress={() => {
                 setMenuVisible(false);
@@ -308,7 +385,7 @@ export const RouteSelectScreen: React.FC = () => {
         onClose={() => setAddShopModalVisible(false)}
         selectedRouteId={selectedRouteId}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -472,6 +549,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
+  shopCardPunched: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1D4ED8',
+  },
   shopCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -486,20 +567,51 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  shopNumberBadgePunched: {
+    backgroundColor: '#FFFFFF',
+  },
   shopNumberText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#1D4ED8',
+  },
+  shopNumberTextPunched: {
+    color: '#1E3A8A',
+    fontWeight: '800',
+  },
+  shopTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  punchedTodayTag: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  punchedTodayTagText: {
+    color: '#FFFFFF',
+    fontSize: 10.5,
+    fontWeight: '800',
   },
   shopName: {
     fontSize: 15,
     fontWeight: '800',
     color: '#111827',
   },
+  shopNamePunched: {
+    color: '#FFFFFF',
+  },
   inchargeText: {
     fontSize: 12,
     color: '#6B7280',
     marginTop: 1,
+  },
+  inchargeTextPunched: {
+    color: '#93C5FD',
   },
   shopAddress: {
     fontSize: 13,
@@ -507,11 +619,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 18,
   },
+  shopAddressPunched: {
+    color: '#E0E7FF',
+  },
   shopPhone: {
     fontSize: 13,
     fontWeight: '600',
     color: '#1F2937',
     marginTop: 4,
+  },
+  shopPhonePunched: {
+    color: '#FFFFFF',
   },
   tagsRow: {
     flexDirection: 'row',
@@ -525,18 +643,30 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 4,
   },
+  tagBadgePunched: {
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  },
   tagText: {
     fontSize: 10.5,
     color: '#4B5563',
     fontWeight: '600',
   },
+  tagTextPunched: {
+    color: '#FFFFFF',
+  },
   fssaiBadge: {
     backgroundColor: '#FEF3C7',
+  },
+  fssaiBadgePunched: {
+    backgroundColor: 'rgba(254, 243, 199, 0.25)',
   },
   fssaiTagText: {
     fontSize: 10.5,
     color: '#92400E',
     fontWeight: '600',
+  },
+  fssaiTagTextPunched: {
+    color: '#FEF3C7',
   },
   punchBtn: {
     backgroundColor: '#059669',
@@ -545,11 +675,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
   },
+  punchBtnPunched: {
+    backgroundColor: '#10B981',
+    borderWidth: 1,
+    borderColor: '#34D399',
+  },
   punchBtnText: {
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 14,
     letterSpacing: 0.3,
+  },
+  punchBtnTextPunched: {
+    color: '#FFFFFF',
   },
   emptyState: {
     alignItems: 'center',

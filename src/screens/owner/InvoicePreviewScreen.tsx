@@ -5,10 +5,10 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   Alert,
   Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useStore } from '../../context/StoreContext';
 import { Order } from '../../types';
@@ -18,6 +18,7 @@ import { numberToWordsIndian } from '../../utils/taxCalculator';
 import { formatDateTime, formatCurrency } from '../../utils/formatters';
 
 export const InvoicePreviewScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { markOrderAsPrinted, orders } = useStore();
@@ -29,14 +30,14 @@ export const InvoicePreviewScreen: React.FC = () => {
 
   if (!currentOrder) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Invoice not found or deleted.</Text>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Text style={styles.backBtnText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -77,9 +78,14 @@ export const InvoicePreviewScreen: React.FC = () => {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Top Bar */}
-      <View style={styles.topBar}>
+      <View
+        style={[
+          styles.topBar,
+          { paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: 10 },
+        ]}
+      >
         <TouchableOpacity style={styles.topBackBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.topBackBtnText}>← Back</Text>
         </TouchableOpacity>
@@ -100,96 +106,130 @@ export const InvoicePreviewScreen: React.FC = () => {
       </View>
 
       {/* Invoice Document Canvas */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 150 + insets.bottom },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.invoiceDocument}>
           {/* Header */}
           <View style={styles.invoiceHeader}>
+            <View style={{ width: 88 }} />
+            <View style={styles.companyInfo}>
+              <Text style={styles.taxInvoiceHeading}>TAX INVOICE</Text>
+              <Text style={styles.companyName}>{COMPANY_DETAILS.name}</Text>
+              <Text style={styles.companyAddr}>
+                {COMPANY_DETAILS.addressLine1} Mob. : {COMPANY_DETAILS.phone}
+              </Text>
+            </View>
             <Image
               source={require('../../../assets/kalyani_enterprise_logo.png')}
               style={styles.invoiceLogo}
               resizeMode="contain"
             />
-            <View style={styles.companyInfo}>
-              <Text style={styles.taxInvoiceBadge}>TAX INVOICE Original / Duplicate</Text>
-              <Text style={styles.companyName}>{COMPANY_DETAILS.name}</Text>
-              <Text style={styles.companyAddr}>
-                {COMPANY_DETAILS.addressLine1} {COMPANY_DETAILS.addressLine2}
-              </Text>
-              <Text style={styles.companyPhone}>Mob: {COMPANY_DETAILS.phone}</Text>
-              <Text style={styles.companyRegs}>
-                GST No: {COMPANY_DETAILS.gstin} | FSSAI: {COMPANY_DETAILS.fssai}
-              </Text>
-            </View>
+          </View>
+
+          {/* GST & FSSAI Bar */}
+          <View style={styles.gstFssaiBar}>
+            <Text style={styles.gstFssaiText}>
+              <Text style={{ fontWeight: 'bold' }}>GST No. :</Text> {COMPANY_DETAILS.gstin}
+            </Text>
+            <Text style={styles.gstFssaiText}>
+              <Text style={{ fontWeight: 'bold' }}>FSSAI No. :</Text> {COMPANY_DETAILS.fssai}
+            </Text>
           </View>
 
           {/* Party and Order Details Box */}
           <View style={styles.metaBox}>
             <View style={styles.partyCol}>
-              <Text style={styles.metaHeading}>Bill To / Ship To Party Details:</Text>
-              <Text style={styles.partyName}>{currentOrder.shop_name}</Text>
-              <Text style={styles.metaLine}>{currentOrder.shop_address}</Text>
-              <Text style={styles.metaLine}>Mo: {currentOrder.shop_phone}</Text>
+              <Text style={styles.metaHeading}>Bill To / Ship To Party Details</Text>
+              <Text style={styles.partyName}>{currentOrder.shop_name.toUpperCase()}</Text>
+              <Text style={styles.metaLine}>{currentOrder.shop_address.toUpperCase()}</Text>
+              <Text style={[styles.metaLine, { fontWeight: 'bold' }]}>Mo.{currentOrder.shop_phone}</Text>
               {currentOrder.shop_incharge ? (
-                <Text style={styles.metaLine}>Incharge: {currentOrder.shop_incharge}</Text>
+                <Text style={styles.metaLine}>Incharge: {currentOrder.shop_incharge.toUpperCase()}</Text>
               ) : null}
               <Text style={styles.metaLine}>
-                GST No: {currentOrder.shop_gstin || 'Unregistered'}
+                GST No. {currentOrder.shop_gstin || ''}    FSSAI No. {currentOrder.shop_fssai || ''}
               </Text>
-              <Text style={styles.metaLine}>
-                Place of Supply: {COMPANY_DETAILS.placeOfSupply}
+              <Text style={[styles.metaLine, { fontWeight: 'bold' }]}>
+                Place of Supply : {COMPANY_DETAILS.placeOfSupply}
               </Text>
             </View>
 
             <View style={styles.orderCol}>
-              <Text style={styles.metaLine}>
-                <Text style={{ fontWeight: 'bold' }}>Order No.:</Text> {currentOrder.order_no}
-              </Text>
-              <Text style={styles.metaLine}>
-                <Text style={{ fontWeight: 'bold' }}>Invoice No.:</Text> {currentOrder.invoice_no}
-              </Text>
-              <Text style={styles.metaLine}>
-                <Text style={{ fontWeight: 'bold' }}>Date & Time:</Text> {formatDateTime(currentOrder.created_at)}
-              </Text>
-              <Text style={styles.metaLine}>
-                <Text style={{ fontWeight: 'bold' }}>Route:</Text> {currentOrder.route_name}
-              </Text>
-              <Text style={styles.metaLine}>
-                <Text style={{ fontWeight: 'bold' }}>Salesman:</Text> {currentOrder.executive_name} ({currentOrder.executive_phone})
-              </Text>
+              <View style={styles.invoiceMetaTop}>
+                <Text style={styles.metaLine}>
+                  <Text style={{ fontWeight: 'bold' }}>Invoice No.</Text>{' '}
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#000' }}>{currentOrder.invoice_no}</Text>
+                </Text>
+                <Text style={[styles.metaLine, { marginTop: 2 }]}>
+                  <Text style={{ fontWeight: 'bold' }}>Invoice Date :</Text> {formatDateTime(currentOrder.created_at)}
+                </Text>
+              </View>
+
+              {/* 3-Col Salesman Subtable */}
+              <View style={styles.salesmanGrid}>
+                <View style={[styles.salesmanCell, { flex: 1.3 }]}>
+                  <Text style={styles.salesmanHeader}>Salesman Name & No.</Text>
+                  <Text style={styles.salesmanVal}>
+                    {currentOrder.executive_name} /{'\n'}{currentOrder.executive_phone}
+                  </Text>
+                </View>
+                <View style={[styles.salesmanCell, { flex: 1 }]}>
+                  <Text style={styles.salesmanHeader}>Delivered By Name & Mo.</Text>
+                  <Text style={styles.salesmanVal}>/</Text>
+                </View>
+                <View style={[styles.salesmanCell, { flex: 1, borderRightWidth: 0 }]}>
+                  <Text style={styles.salesmanHeader}>Route :</Text>
+                  <Text style={[styles.salesmanVal, { fontWeight: 'bold' }]}>
+                    {currentOrder.route_name.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
 
           {/* Items Table (Discount column removed) */}
           <View style={styles.tableContainer}>
             <View style={styles.tableHeaderRow}>
-              <Text style={[styles.th, { width: 26 }]}>Sr.</Text>
-              <Text style={[styles.th, { flex: 2, textAlign: 'left' }]}>Product Name</Text>
-              <Text style={[styles.th, { width: 32 }]}>Qty</Text>
+              <Text style={[styles.th, { width: 24 }]}>Sr.</Text>
+              <Text style={[styles.th, { flex: 2.2, textAlign: 'left' }]}>Product Name</Text>
+              <Text style={[styles.th, { width: 28 }]}>Qty</Text>
               <Text style={[styles.th, { width: 44 }]}>Rate</Text>
+              <Text style={[styles.th, { width: 48 }]}>Amount</Text>
               <Text style={[styles.th, { width: 50 }]}>Taxable</Text>
-              <Text style={[styles.th, { width: 34 }]}>GST</Text>
-              <Text style={[styles.th, { width: 42 }]}>GST ₹</Text>
-              <Text style={[styles.th, { width: 52 }]}>Total</Text>
+              <Text style={[styles.th, { width: 30 }]}>GST</Text>
+              <Text style={[styles.th, { width: 44 }]}>GST ₹</Text>
+              <Text style={[styles.th, { width: 50 }]}>Total</Text>
             </View>
 
             {currentOrder.items.map((item, idx) => (
               <View key={item.id} style={styles.tableRow}>
-                <Text style={[styles.td, { width: 26, textAlign: 'center' }]}>{idx + 1}</Text>
-                <Text style={[styles.td, { flex: 2, textAlign: 'left' }]}>{item.product_name}</Text>
-                <Text style={[styles.td, { width: 32, textAlign: 'center' }]}>{item.qty}</Text>
+                <Text style={[styles.td, { width: 24, textAlign: 'center' }]}>{idx + 1}</Text>
+                <Text style={[styles.td, { flex: 2.2, textAlign: 'left' }]}>
+                  {item.product_name}
+                  {item.hsn_code && !item.product_name.includes(item.hsn_code) ? ` ( ${item.hsn_code} )` : ''}
+                </Text>
+                <Text style={[styles.td, { width: 28, textAlign: 'center' }]}>{item.qty}</Text>
                 <Text style={[styles.td, { width: 44, textAlign: 'right' }]}>
                   {item.rate.toFixed(2)}
+                </Text>
+                <Text style={[styles.td, { width: 48, textAlign: 'right' }]}>
+                  {(item.qty * item.rate).toFixed(2)}
                 </Text>
                 <Text style={[styles.td, { width: 50, textAlign: 'right' }]}>
                   {item.taxable_amount.toFixed(2)}
                 </Text>
-                <Text style={[styles.td, { width: 34, textAlign: 'center' }]}>
-                  {item.gst_rate}%
+                <Text style={[styles.td, { width: 30, textAlign: 'center' }]}>
+                  {item.gst_rate}
                 </Text>
-                <Text style={[styles.td, { width: 42, textAlign: 'right' }]}>
+                <Text style={[styles.td, { width: 44, textAlign: 'right' }]}>
                   {item.gst_amount.toFixed(2)}
                 </Text>
-                <Text style={[styles.td, { width: 52, textAlign: 'right', fontWeight: 'bold' }]}>
+                <Text style={[styles.td, { width: 50, textAlign: 'right', fontWeight: 'bold' }]}>
                   {item.total_amount.toFixed(2)}
                 </Text>
               </View>
@@ -197,21 +237,24 @@ export const InvoicePreviewScreen: React.FC = () => {
 
             {/* Total Row */}
             <View style={[styles.tableRow, styles.tableTotalRow]}>
-              <Text style={[styles.td, { flex: 2, textAlign: 'right', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { flex: 2.2, textAlign: 'right', fontWeight: 'bold' }]}>
                 TOTAL:
               </Text>
-              <Text style={[styles.td, { width: 32, textAlign: 'center', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { width: 28, textAlign: 'center', fontWeight: 'bold' }]}>
                 {currentOrder.total_qty}
               </Text>
               <Text style={[styles.td, { width: 44 }]}></Text>
+              <Text style={[styles.td, { width: 48, textAlign: 'right', fontWeight: 'bold' }]}>
+                ₹{currentOrder.taxable_amount.toFixed(2)}
+              </Text>
               <Text style={[styles.td, { width: 50, textAlign: 'right', fontWeight: 'bold' }]}>
                 ₹{currentOrder.taxable_amount.toFixed(2)}
               </Text>
-              <Text style={[styles.td, { width: 34 }]}></Text>
-              <Text style={[styles.td, { width: 42, textAlign: 'right', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { width: 30 }]}></Text>
+              <Text style={[styles.td, { width: 44, textAlign: 'right', fontWeight: 'bold' }]}>
                 ₹{currentOrder.total_gst.toFixed(2)}
               </Text>
-              <Text style={[styles.td, { width: 52, textAlign: 'right', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { width: 50, textAlign: 'right', fontWeight: 'bold' }]}>
                 ₹{(currentOrder.taxable_amount + currentOrder.total_gst).toFixed(2)}
               </Text>
             </View>
@@ -221,7 +264,7 @@ export const InvoicePreviewScreen: React.FC = () => {
           {Object.keys(categoryQtyMap).length > 0 && (
             <View style={styles.catBox}>
               <View style={styles.catBoxHeader}>
-                <Text style={styles.catBoxHeaderCell}>CATEGORY</Text>
+                <Text style={styles.catBoxHeaderCell}>ITEM</Text>
                 {Object.keys(categoryQtyMap).map((cat) => (
                   <Text key={cat} style={styles.catBoxHeaderCell}>
                     {cat.toUpperCase()}
@@ -243,43 +286,18 @@ export const InvoicePreviewScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Tax Summary & Grand Total */}
-          <View style={styles.taxSummaryCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.taxBreakupTitle}>Total GST Payable Breakup:</Text>
-              <Text style={styles.taxBreakupSub}>
-                CGST (2.5%): ₹{currentOrder.cgst_amount.toFixed(2)} &bull; SGST (2.5%): ₹
-                {currentOrder.sgst_amount.toFixed(2)} &bull; IGST: ₹0.00
-              </Text>
-              <Text style={styles.taxBreakupSub}>
-                Total GST: ₹{currentOrder.total_gst.toFixed(2)} | Round Off:{' '}
-                {currentOrder.round_off >= 0 ? '+' : ''}
-                {currentOrder.round_off.toFixed(2)}
-              </Text>
-              <Text style={styles.inWords}>
-                <Text style={{ fontWeight: 'bold' }}>In Words:</Text> {amountInWords}
-              </Text>
-            </View>
-
-            <View style={styles.grandTotalBox}>
-              <Text style={styles.grandTotalLabel}>GRAND TOTAL</Text>
-              <Text style={styles.grandTotalAmount}>
-                ₹{currentOrder.grand_total.toLocaleString('en-IN')}
-              </Text>
-            </View>
-          </View>
-
           {/* Footer & Signatory */}
           <View style={styles.invoiceFooter}>
             <View style={{ flex: 1 }}>
-              {COMPANY_DETAILS.terms.map((t, idx) => (
-                <Text key={idx} style={styles.termLine}>
-                  {t}
-                </Text>
-              ))}
+              <View style={styles.bankBox}>
+                <Text style={styles.bankTitle}>Bank Details :</Text>
+                <Text style={styles.bankText}>Bank Name : {COMPANY_DETAILS.bankDetails.bankName}</Text>
+                <Text style={styles.bankText}>Account No : {COMPANY_DETAILS.bankDetails.accountNo}</Text>
+                <Text style={styles.bankText}>IFSC Code : {COMPANY_DETAILS.bankDetails.ifscCode}</Text>
+              </View>
             </View>
             <View style={styles.signatory}>
-              <Text style={styles.signFor}>For, {COMPANY_DETAILS.name}</Text>
+              <Text style={styles.signFor}>{COMPANY_DETAILS.name}</Text>
               <View style={styles.signLine} />
               <Text style={styles.signLabel}>Authorised Signatory</Text>
             </View>
@@ -288,7 +306,12 @@ export const InvoicePreviewScreen: React.FC = () => {
       </ScrollView>
 
       {/* Action Footer Bar */}
-      <View style={styles.actionBar}>
+      <View
+        style={[
+          styles.actionBar,
+          { paddingBottom: Math.max(insets.bottom, 12) + 8 },
+        ]}
+      >
         {/* Toggle / Checkbox for Printed Status */}
         <TouchableOpacity
           style={[styles.printCheckRow, isAlreadyPrinted && styles.printCheckRowDone]}
@@ -323,7 +346,7 @@ export const InvoicePreviewScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -411,59 +434,91 @@ const styles = StyleSheet.create({
   invoiceHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#000',
-    paddingBottom: 8,
-    gap: 10,
+    justifyContent: 'space-between',
+    paddingBottom: 6,
   },
   invoiceLogo: {
-    width: 60,
-    height: 60,
+    width: 88,
+    height: 88,
   },
   companyInfo: {
     flex: 1,
     alignItems: 'center',
   },
-  taxInvoiceBadge: {
-    fontSize: 10,
+  taxInvoiceHeading: {
+    fontSize: 11,
     fontWeight: 'bold',
-    textDecorationLine: 'underline',
+    color: '#000',
+    marginBottom: 1,
   },
   companyName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: '#000',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   companyAddr: {
-    fontSize: 9.5,
+    fontSize: 9,
+    fontWeight: 'bold',
     color: '#222',
   },
-  companyPhone: {
-    fontSize: 9.5,
-    fontWeight: 'bold',
-    color: '#000',
+  gstFssaiBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1.2,
+    borderBottomWidth: 1.2,
+    borderColor: '#000',
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    marginTop: 4,
+    marginBottom: 4,
   },
-  companyRegs: {
+  gstFssaiText: {
     fontSize: 9,
-    fontWeight: '600',
-    color: '#333',
+    color: '#000',
   },
   metaBox: {
     flexDirection: 'row',
-    borderWidth: 1,
+    borderWidth: 1.2,
     borderColor: '#000',
-    marginTop: 8,
+    marginTop: 4,
   },
   partyCol: {
     flex: 1,
-    padding: 6,
-    borderRightWidth: 1,
+    padding: 5,
+    borderRightWidth: 1.2,
     borderRightColor: '#000',
   },
   orderCol: {
     flex: 1,
-    padding: 6,
+  },
+  invoiceMetaTop: {
+    padding: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#000',
+  },
+  salesmanGrid: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  salesmanCell: {
+    padding: 3,
+    borderRightWidth: 1,
+    borderRightColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  salesmanHeader: {
+    fontSize: 7.5,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  salesmanVal: {
+    fontSize: 8,
+    color: '#111',
+    textAlign: 'center',
   },
   metaHeading: {
     fontSize: 9.5,
@@ -595,10 +650,24 @@ const styles = StyleSheet.create({
   },
   invoiceFooter: {
     flexDirection: 'row',
-    marginTop: 10,
+    marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#000',
-    paddingTop: 6,
+    paddingTop: 5,
+  },
+  bankBox: {
+    marginBottom: 5,
+  },
+  bankTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 1,
+  },
+  bankText: {
+    fontSize: 8.5,
+    color: '#111',
+    lineHeight: 12,
   },
   termLine: {
     fontSize: 8,
@@ -608,19 +677,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   signFor: {
-    fontSize: 9,
-    fontWeight: 'bold',
+    fontSize: 9.5,
+    fontWeight: '900',
     color: '#000',
   },
   signLine: {
-    width: 90,
+    width: 120,
     height: 1,
-    backgroundColor: '#000',
-    marginTop: 24,
-    marginBottom: 2,
+    borderStyle: 'dashed',
+    borderWidth: 0.8,
+    borderColor: '#000',
+    marginTop: 45,
+    marginBottom: 3,
   },
   signLabel: {
     fontSize: 8.5,
+    fontWeight: 'bold',
     color: '#333',
   },
   actionBar: {

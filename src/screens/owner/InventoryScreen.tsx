@@ -7,17 +7,18 @@ import {
   StyleSheet,
   TextInput,
   Alert,
-  SafeAreaView,
   Modal,
   RefreshControl,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../../context/StoreContext';
 import { Product } from '../../types';
 import { CategoryManagerModal } from './CategoryManagerModal';
 import { AddProductModal } from './AddProductModal';
 
 export const InventoryScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { categories, products, updateStock, deleteProduct, refreshData } = useStore();
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
@@ -76,9 +77,14 @@ export const InventoryScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Action Header */}
-      <View style={styles.topActions}>
+      <View
+        style={[
+          styles.topActions,
+          { paddingTop: Math.max(insets.top, 10) + 6 },
+        ]}
+      >
         <TouchableOpacity
           style={styles.headerActionBtn}
           onPress={() => setCategoryModalVisible(true)}
@@ -157,7 +163,10 @@ export const InventoryScreen: React.FC = () => {
           <FlatList
             data={filteredProducts}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.productsList}
+            contentContainerStyle={[
+              styles.productsList,
+              { paddingBottom: Math.max(insets.bottom, 24) + 60 },
+            ]}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
@@ -312,7 +321,7 @@ export const InventoryScreen: React.FC = () => {
         onClose={() => setAddProductModalVisible(false)}
         defaultCategoryId={selectedCategoryId}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 

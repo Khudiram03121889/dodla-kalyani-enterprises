@@ -26,17 +26,11 @@ export function formatDateTime(isoStringOrDate?: string | Date): string {
   return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
-export function generateOrderNumbers(): { orderNo: string; invoiceNo: string } {
-  const now = new Date();
-  const yy = now.getFullYear().toString().slice(-2);
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  const timeSuffix = String(now.getHours()).padStart(2, '0') +
-    String(now.getMinutes()).padStart(2, '0') +
-    String(now.getSeconds()).padStart(2, '0');
-  const rand = Math.floor(100 + Math.random() * 900); // 3-digit entropy
+export function generateInvoiceNumber(currentCount: number = 0): string {
+  return String(currentCount + 1);
+}
 
-  const orderNo = `SO-${yy}${mm}${dd}-${timeSuffix}-${rand}`;
-  const invoiceNo = `G-2627-${timeSuffix}${rand}`;
-  return { orderNo, invoiceNo };
+export function generateOrderNumbers(currentCount: number = 0): { orderNo: string; invoiceNo: string } {
+  const invoiceNo = String(currentCount + 1);
+  return { orderNo: invoiceNo, invoiceNo };
 }

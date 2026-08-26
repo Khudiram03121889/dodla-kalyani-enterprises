@@ -14,8 +14,7 @@ function escapeHtml(str?: string | null): string {
     .replace(/'/g, '&#039;');
 }
 
-export function generateInvoiceHtml(order: Order): string {
-  const amountInWords = numberToWordsIndian(order.grand_total);
+function generateInvoiceBoxContent(order: Order): string {
   const formattedDate = formatDateTime(order.created_at);
 
   // Group items by category to build the category summary box
@@ -31,7 +30,7 @@ export function generateInvoiceHtml(order: Order): string {
       ? `
       <table class="category-table">
         <tr>
-          <th>ITEM CATEGORY</th>
+          <th>ITEM</th>
           ${categoryHeaders.map((cat) => `<th>${escapeHtml(cat.toUpperCase())}</th>`).join('')}
           <th>TOTAL</th>
         </tr>
@@ -49,12 +48,15 @@ export function generateInvoiceHtml(order: Order): string {
       (item, idx) => `
       <tr>
         <td style="text-align: center;">${idx + 1}</td>
-        <td>${escapeHtml(item.product_name)}</td>
+        <td style="text-align: left;">
+          ${escapeHtml(item.product_name)}
+          ${item.hsn_code && !item.product_name.includes(item.hsn_code) ? ` ( ${escapeHtml(item.hsn_code)} )` : ''}
+        </td>
         <td style="text-align: center;">${item.qty}</td>
         <td style="text-align: right;">${item.rate.toFixed(2)}</td>
         <td style="text-align: right;">${(item.qty * item.rate).toFixed(2)}</td>
         <td style="text-align: right;">${item.taxable_amount.toFixed(2)}</td>
-        <td style="text-align: center;">${item.gst_rate}%</td>
+        <td style="text-align: center;">${item.gst_rate}</td>
         <td style="text-align: right;">${item.gst_amount.toFixed(2)}</td>
         <td style="text-align: right;"><strong>${item.total_amount.toFixed(2)}</strong></td>
       </tr>
@@ -63,176 +65,76 @@ export function generateInvoiceHtml(order: Order): string {
     .join('');
 
   return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Tax Invoice - ${escapeHtml(order.invoice_no)}</title>
-  <style>
-    @page {
-      size: A5 portrait;
-      margin: 4mm;
-    }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 9.5px;
-      color: #111;
-      margin: 0;
-      padding: 0;
-      line-height: 1.25;
-    }
-    .invoice-box {
-      border: 1.2px solid #000;
-      padding: 6px;
-      background: #fff;
-    }
-    .header-table {
-      width: 100%;
-      border-bottom: 1.2px solid #000;
-      padding-bottom: 4px;
-      margin-bottom: 5px;
-    }
-    .company-title {
-      font-size: 15px;
-      font-weight: 900;
-      letter-spacing: 0.3px;
-      margin: 0 0 2px 0;
-    }
-    .logo-img {
-      max-height: 48px;
-      max-width: 90px;
-      object-fit: contain;
-    }
-    .meta-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 5px;
-    }
-    .meta-table td {
-      vertical-align: top;
-      padding: 3px;
-      border: 1px solid #ccc;
-      font-size: 8.5px;
-    }
-    .items-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 4px;
-      margin-bottom: 5px;
-    }
-    .items-table tr {
-      page-break-inside: avoid;
-    }
-    .items-table th, .items-table td {
-      border: 1px solid #000;
-      padding: 2.5px 3.5px;
-      font-size: 8px;
-    }
-    .items-table th {
-      background-color: #f2f2f2;
-      font-weight: bold;
-      text-align: center;
-    }
-    .category-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 4px;
-      margin-bottom: 5px;
-      page-break-inside: avoid;
-    }
-    .category-table th, .category-table td {
-      border: 1px solid #777;
-      padding: 2px 3px;
-      text-align: center;
-      font-size: 7.5px;
-    }
-    .category-table th {
-      background: #fafafa;
-    }
-    .tax-summary-box {
-      border: 1px solid #000;
-      padding: 4px;
-      margin-top: 4px;
-      background: #fdfdfd;
-      font-size: 8.5px;
-      page-break-inside: avoid;
-    }
-    .grand-total-row {
-      font-size: 11px;
-      font-weight: bold;
-      background-color: #eee;
-    }
-    .footer-table {
-      width: 100%;
-      margin-top: 6px;
-      border-top: 1px solid #000;
-      padding-top: 4px;
-      page-break-inside: avoid;
-    }
-    .signatory-box {
-      text-align: right;
-      font-weight: bold;
-      font-size: 8px;
-    }
-    .terms-box {
-      font-size: 7.5px;
-      color: #333;
-      line-height: 1.2;
-    }
-  </style>
-</head>
-<body>
   <div class="invoice-box">
     <!-- Header -->
     <table class="header-table">
       <tr>
-        <td style="width: 95px; text-align: left; vertical-align: middle;">
+        <td style="width: 95px; text-align: left; vertical-align: middle;"></td>
+        <td style="text-align: center; vertical-align: middle;">
+          <div class="tax-invoice-heading">TAX INVOICE</div>
+          <div class="company-title">${COMPANY_DETAILS.name}</div>
+          <div class="company-address">${COMPANY_DETAILS.addressLine1} Mob. : ${COMPANY_DETAILS.phone}</div>
+        </td>
+        <td style="width: 95px; text-align: right; vertical-align: middle;">
           <img src="${KALYANI_LOGO_BASE64}" class="logo-img" alt="Kalyani Enterprises Logo" />
         </td>
-        <td style="text-align: center; vertical-align: middle;">
-          <div style="font-size: 10px; font-weight: bold; text-decoration: underline;">TAX INVOICE Original / Duplicate</div>
-          <div class="company-title">${COMPANY_DETAILS.name}</div>
-          <div style="font-size: 8.5px;">${COMPANY_DETAILS.addressLine1} ${COMPANY_DETAILS.addressLine2} | Mob: <strong>${COMPANY_DETAILS.phone}</strong></div>
-          <div style="font-size: 8.5px;"><strong>GST No.:</strong> ${COMPANY_DETAILS.gstin} &nbsp;|&nbsp; <strong>FSSAI No.:</strong> ${COMPANY_DETAILS.fssai}</div>
-        </td>
+      </tr>
+    </table>
+
+    <!-- GST & FSSAI Bar -->
+    <table class="gst-fssai-bar">
+      <tr>
+        <td style="width: 50%; text-align: left;"><strong>GST No. :</strong> ${COMPANY_DETAILS.gstin}</td>
+        <td style="width: 50%; text-align: right;"><strong>FSSAI No. :</strong> ${COMPANY_DETAILS.fssai}</td>
       </tr>
     </table>
 
     <!-- Party and Order Details -->
     <table class="meta-table">
       <tr>
-        <td style="width: 50%;">
-          <strong>Bill To / Ship To Party Details:</strong><br />
-          <strong style="font-size: 12px;">${escapeHtml(order.shop_name)}</strong><br />
-          ${escapeHtml(order.shop_address)}<br />
-          <strong>Mobile:</strong> ${escapeHtml(order.shop_phone)}<br />
-          ${order.shop_incharge ? `<strong>Incharge:</strong> ${escapeHtml(order.shop_incharge)}<br />` : ''}
-          <strong>GST No.:</strong> ${escapeHtml(order.shop_gstin) || 'Unregistered'} &nbsp;|&nbsp; <strong>FSSAI No.:</strong> ${escapeHtml(order.shop_fssai) || 'N/A'}<br />
-          <strong>Place of Supply:</strong> ${COMPANY_DETAILS.placeOfSupply}
+        <td class="party-col">
+          <div style="font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 1px; margin-bottom: 2px;">Bill To/Ship To Party Details</div>
+          <div style="font-size: 11px; font-weight: 900; margin-bottom: 2px;">${escapeHtml(order.shop_name.toUpperCase())}</div>
+          <div style="margin-bottom: 2px;">${escapeHtml(order.shop_address.toUpperCase())}</div>
+          <div style="font-weight: bold; margin-bottom: 2px;">Mo.${escapeHtml(order.shop_phone)}</div>
+          ${order.shop_incharge ? `<div style="margin-bottom: 2px;"><strong>Incharge:</strong> ${escapeHtml(order.shop_incharge.toUpperCase())}</div>` : ''}
+          <div style="margin-bottom: 2px;"><strong>GST No.</strong> ${escapeHtml(order.shop_gstin || '')}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>FSSAI No.</strong> ${escapeHtml(order.shop_fssai || '')}</div>
+          <div><strong>Place of Supply :</strong> ${COMPANY_DETAILS.placeOfSupply}</div>
         </td>
-        <td style="width: 50%;">
-          <strong>Order No.:</strong> ${escapeHtml(order.order_no)}<br />
-          <strong>Invoice No.:</strong> <span style="font-size: 12px; font-weight: bold;">${escapeHtml(order.invoice_no)}</span><br />
-          <strong>Invoice Date & Time:</strong> ${formattedDate}<br />
-          <strong>Route:</strong> <span style="font-weight: bold; color: #000;">${escapeHtml(order.route_name)}</span><br />
-          <strong>Salesman Name & No.:</strong> ${escapeHtml(order.executive_name)} / ${escapeHtml(order.executive_phone)}<br />
+        <td class="invoice-col">
+          <div class="invoice-meta-top">
+            <div><strong>Invoice No.</strong> <span style="font-size: 11px; font-weight: 900;">${escapeHtml(order.invoice_no)}</span></div>
+            <div style="margin-top: 2px;"><strong>Invoice Date :</strong> ${formattedDate}</div>
+          </div>
+          <table class="salesman-subtable">
+            <tr>
+              <th style="width: 40%;">Salesman Name &amp; No.</th>
+              <th style="width: 30%;">Delivered By Name &amp; Mo.</th>
+              <th style="width: 30%; border-right: none;">Route :</th>
+            </tr>
+            <tr>
+              <td style="font-weight: bold;">${escapeHtml(order.executive_name)} /<br />${escapeHtml(order.executive_phone)}</td>
+              <td>/</td>
+              <td style="border-right: none; font-weight: bold;">${escapeHtml(order.route_name.toUpperCase())}</td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>
 
-    <!-- Items Table (Discount column removed) -->
+    <!-- Items Table -->
     <table class="items-table">
       <thead>
         <tr>
-          <th style="width: 30px;">Sr.</th>
+          <th style="width: 25px;">Sr. No.</th>
           <th>Product Name</th>
-          <th style="width: 35px;">Qty</th>
-          <th style="width: 55px;">Rate (₹)</th>
-          <th style="width: 65px;">Total Amt</th>
-          <th style="width: 65px;">Taxable Amt</th>
-          <th style="width: 45px;">GST %</th>
-          <th style="width: 55px;">GST Amt</th>
-          <th style="width: 65px;">Total (₹)</th>
+          <th style="width: 30px;">Qty</th>
+          <th style="width: 48px;">Rate</th>
+          <th style="width: 52px;">Amount</th>
+          <th style="width: 56px;">Taxable Amt.</th>
+          <th style="width: 32px;">GST %</th>
+          <th style="width: 48px;">GST Amt</th>
+          <th style="width: 56px;">Total</th>
         </tr>
       </thead>
       <tbody>
@@ -253,45 +155,481 @@ export function generateInvoiceHtml(order: Order): string {
     <!-- Category Summary Breakdown Box -->
     ${categorySummaryHtml}
 
-    <!-- Tax & Grand Total Summary -->
-    <div class="tax-summary-box">
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td style="vertical-align: top; width: 60%;">
-            <div><strong>Total GST Payable Breakup:</strong></div>
-            <div>CGST (2.5%): <strong>₹${order.cgst_amount.toFixed(2)}</strong> &nbsp;|&nbsp; SGST (2.5%): <strong>₹${order.sgst_amount.toFixed(2)}</strong> &nbsp;|&nbsp; IGST (0%): <strong>₹0.00</strong></div>
-            <div style="margin-top: 4px;"><strong>Total GST:</strong> ₹${order.total_gst.toFixed(2)}</div>
-            <div style="margin-top: 4px;"><strong>Round Off:</strong> ${order.round_off >= 0 ? '+' : ''}${order.round_off.toFixed(2)}</div>
-            <div style="margin-top: 6px;"><strong>Amount in Words:</strong><br /><em>${amountInWords}</em></div>
-          </td>
-          <td style="vertical-align: middle; text-align: right; width: 40%;">
-            <div style="border: 2px solid #000; padding: 8px; background: #f2f2f2; text-align: center;">
-              <div style="font-size: 11px; text-transform: uppercase;">Grand Total</div>
-              <div style="font-size: 20px; font-weight: 900; color: #000;">₹${order.grand_total.toLocaleString('en-IN')}</div>
-            </div>
-          </td>
-        </tr>
-      </table>
-    </div>
-
     <!-- Footer & Signatory -->
     <table class="footer-table">
       <tr>
-        <td style="width: 60%; vertical-align: top;">
-          <div class="terms-box">
-            ${COMPANY_DETAILS.terms.map((t) => `<div>${t}</div>`).join('')}
-            <div style="margin-top: 4px;">(Invoice generated on ${formattedDate})</div>
+        <td style="width: 55%; vertical-align: top;">
+          <div class="bank-details-box" style="font-size: 8.5px; line-height: 1.35;">
+            <div style="font-weight: bold; font-size: 9px; margin-bottom: 2px;">Bank Details :</div>
+            <div><strong>Bank Name :</strong> ${COMPANY_DETAILS.bankDetails.bankName}</div>
+            <div><strong>Account No :</strong> ${COMPANY_DETAILS.bankDetails.accountNo}</div>
+            <div><strong>IFSC Code :</strong> ${COMPANY_DETAILS.bankDetails.ifscCode}</div>
           </div>
         </td>
-        <td style="width: 40%; vertical-align: bottom; text-align: right;">
+        <td style="width: 45%; vertical-align: top; text-align: right;">
           <div class="signatory-box">
-            <div>For, <strong>${COMPANY_DETAILS.name}</strong></div>
-            <div style="margin-top: 35px; border-top: 1px dashed #444; display: inline-block; padding-top: 4px;">
+            <div style="font-size: 11px; font-weight: 900; letter-spacing: 0.3px;">${COMPANY_DETAILS.name}</div>
+            <div style="margin-top: 55px; border-top: 1px dashed #000; display: inline-block; padding-top: 2px; width: 140px; text-align: center; font-weight: bold; font-size: 8.5px;">
               Authorised Signatory
             </div>
           </div>
         </td>
       </tr>
+    </table>
+  </div>
+  `;
+}
+
+export function generateInvoiceHtml(order: Order): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Tax Invoice - ${escapeHtml(order.invoice_no)}</title>
+  <style>
+    @page {
+      size: A5 portrait;
+      margin: 3mm;
+    }
+    html, body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10px;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      line-height: 1.25;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .invoice-box {
+      border: 1.5px solid #000;
+      padding: 4px;
+      background: #fff;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2px;
+    }
+    .company-title {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      margin: 1px 0;
+      text-align: center;
+    }
+    .tax-invoice-heading {
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1px;
+    }
+    .company-address {
+      font-size: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .logo-img {
+      max-height: 85px;
+      max-width: 95px;
+      object-fit: contain;
+    }
+    .gst-fssai-bar {
+      width: 100%;
+      border-top: 1.2px solid #000;
+      border-bottom: 1.2px solid #000;
+      border-collapse: collapse;
+      font-size: 9.5px;
+      font-weight: bold;
+      margin-top: 3px;
+      margin-bottom: 3px;
+    }
+    .gst-fssai-bar td {
+      padding: 2px 4px;
+    }
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 3px;
+    }
+    .meta-table td {
+      vertical-align: top;
+    }
+    .party-col {
+      width: 50%;
+      border: 1.2px solid #000;
+      padding: 4px;
+      font-size: 9px;
+    }
+    .invoice-col {
+      width: 50%;
+      border: 1.2px solid #000;
+      border-left: none;
+      padding: 0;
+      font-size: 9px;
+    }
+    .invoice-meta-top {
+      padding: 4px 6px;
+      border-bottom: 1px solid #000;
+    }
+    .salesman-subtable {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 8.5px;
+    }
+    .salesman-subtable th {
+      font-weight: bold;
+      padding: 2.5px 2px;
+      border-right: 1px solid #000;
+      background: #f2f2f2;
+    }
+    .salesman-subtable td {
+      padding: 3px 2px;
+      border-top: 1px solid #000;
+      border-right: 1px solid #000;
+      font-size: 8.5px;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 3px;
+      margin-bottom: 3px;
+    }
+    .items-table tr {
+      page-break-inside: avoid;
+    }
+    .items-table th, .items-table td {
+      border: 1px solid #000;
+      padding: 3px 3px;
+      font-size: 8.5px;
+    }
+    .items-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      text-align: center;
+    }
+    .category-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 3px;
+      margin-bottom: 2px;
+      page-break-inside: avoid;
+    }
+    .category-table th, .category-table td {
+      border: 1px solid #000;
+      padding: 2.5px 3px;
+      text-align: center;
+      font-size: 8.5px;
+    }
+    .category-table th {
+      background: #f2f2f2;
+      font-weight: bold;
+    }
+    .footer-table {
+      width: 100%;
+      margin-top: 6px;
+      padding-top: 4px;
+      page-break-inside: avoid;
+    }
+    .signatory-box {
+      text-align: right;
+      font-size: 9px;
+    }
+    .terms-box {
+      font-size: 7.5px;
+      color: #333;
+      line-height: 1.2;
+    }
+  </style>
+</head>
+<body>
+  ${generateInvoiceBoxContent(order)}
+</body>
+</html>
+  `;
+}
+
+export function generateCombinedInvoicesWithSummaryHtml(
+  orders: Order[],
+  routeName?: string
+): string {
+  const effectiveRouteName =
+    routeName || (orders.length > 0 ? orders[0].route_name : 'Combined Route');
+  const generatedTime = formatDateTime(new Date());
+  const totalAmount = orders.reduce((sum, o) => sum + o.grand_total, 0);
+
+  // 1. Generate individual invoice pages
+  const invoicePagesHtml = orders
+    .map(
+      (order) => `
+    <div class="page-container invoice-page">
+      ${generateInvoiceBoxContent(order)}
+    </div>
+  `
+    )
+    .join('');
+
+  // 2. Generate the 39th page route summary table rows
+  const summaryRowsHtml = orders
+    .map(
+      (o, idx) => `
+      <tr>
+        <td style="text-align: center;">${idx + 1}</td>
+        <td style="font-weight: bold;">${escapeHtml(o.invoice_no)}</td>
+        <td><strong>${escapeHtml(o.shop_name)}</strong> - ${escapeHtml(o.shop_address)}</td>
+        <td style="text-align: center;">${escapeHtml(o.shop_phone)}</td>
+        <td style="text-align: right; font-weight: bold;">₹${o.grand_total.toLocaleString('en-IN')}</td>
+      </tr>
+    `
+    )
+    .join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Invoices &amp; Route Summary - ${escapeHtml(effectiveRouteName)}</title>
+  <style>
+    @page {
+      size: A5 portrait;
+      margin: 3mm;
+    }
+    html, body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10px;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      line-height: 1.25;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page-container {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .invoice-page {
+      page-break-after: always;
+      break-after: page;
+      margin-bottom: 20px;
+    }
+    .summary-page {
+      page-break-inside: avoid;
+      padding: 4px;
+    }
+    .invoice-box {
+      border: 1.5px solid #000;
+      padding: 4px;
+      background: #fff;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2px;
+    }
+    .company-title {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      margin: 1px 0;
+      text-align: center;
+    }
+    .tax-invoice-heading {
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1px;
+    }
+    .company-address {
+      font-size: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .logo-img {
+      max-height: 85px;
+      max-width: 95px;
+      object-fit: contain;
+    }
+    .gst-fssai-bar {
+      width: 100%;
+      border-top: 1.2px solid #000;
+      border-bottom: 1.2px solid #000;
+      border-collapse: collapse;
+      font-size: 9.5px;
+      font-weight: bold;
+      margin-top: 3px;
+      margin-bottom: 3px;
+    }
+    .gst-fssai-bar td {
+      padding: 2px 4px;
+    }
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 3px;
+    }
+    .meta-table td {
+      vertical-align: top;
+    }
+    .party-col {
+      width: 50%;
+      border: 1.2px solid #000;
+      padding: 4px;
+      font-size: 9px;
+    }
+    .invoice-col {
+      width: 50%;
+      border: 1.2px solid #000;
+      border-left: none;
+      padding: 0;
+      font-size: 9px;
+    }
+    .invoice-meta-top {
+      padding: 4px 6px;
+      border-bottom: 1px solid #000;
+    }
+    .salesman-subtable {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 8.5px;
+    }
+    .salesman-subtable th {
+      font-weight: bold;
+      padding: 2.5px 2px;
+      border-right: 1px solid #000;
+      background: #f2f2f2;
+    }
+    .salesman-subtable td {
+      padding: 3px 2px;
+      border-top: 1px solid #000;
+      border-right: 1px solid #000;
+      font-size: 8.5px;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 3px;
+      margin-bottom: 3px;
+    }
+    .items-table tr {
+      page-break-inside: avoid;
+    }
+    .items-table th, .items-table td {
+      border: 1px solid #000;
+      padding: 3px 3px;
+      font-size: 8.5px;
+    }
+    .items-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      text-align: center;
+    }
+    .category-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 3px;
+      margin-bottom: 2px;
+      page-break-inside: avoid;
+    }
+    .category-table th, .category-table td {
+      border: 1px solid #000;
+      padding: 2.5px 3px;
+      text-align: center;
+      font-size: 8.5px;
+    }
+    .category-table th {
+      background: #f2f2f2;
+      font-weight: bold;
+    }
+    .footer-table {
+      width: 100%;
+      margin-top: 6px;
+      padding-top: 4px;
+      page-break-inside: avoid;
+    }
+    .signatory-box {
+      text-align: right;
+      font-size: 9px;
+    }
+    .summary-header-box {
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 5px;
+      margin-bottom: 8px;
+    }
+    .summary-title {
+      font-size: 15px;
+      font-weight: 900;
+      margin: 0 0 3px 0;
+    }
+    .summary-subhead {
+      font-size: 10.5px;
+      margin: 1px 0;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+    .summary-table tr {
+      page-break-inside: avoid;
+    }
+    .summary-table th, .summary-table td {
+      border: 1px solid #000;
+      padding: 4px 5px;
+      font-size: 9px;
+    }
+    .summary-table th {
+      background-color: #e8e8e8;
+      font-weight: bold;
+      text-align: center;
+    }
+    .summary-total-row {
+      background-color: #f2f2f2;
+      font-size: 10.5px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  ${invoicePagesHtml}
+
+  <!-- Final Page: Page 39 Route Summary Sheet -->
+  <div class="page-container summary-page">
+    <div class="summary-header-box">
+      <div class="summary-title">${COMPANY_DETAILS.name}</div>
+      <div class="summary-subhead"><strong>Route Summary Sheet (Page 39 Format)</strong></div>
+      <div class="summary-subhead"><strong>Route Name:</strong> ${escapeHtml(effectiveRouteName)}</div>
+      <div class="summary-subhead"><strong>Generated On:</strong> ${generatedTime}</div>
+      <div class="summary-subhead"><strong>Total Shops Punched:</strong> ${orders.length}</div>
+    </div>
+
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th style="width: 35px;">No.</th>
+          <th style="width: 90px;">Bill No.</th>
+          <th>Party Name &amp; Address</th>
+          <th style="width: 95px;">Mobile No.</th>
+          <th style="width: 95px;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${summaryRowsHtml}
+        <tr class="summary-total-row">
+          <td colspan="4" style="text-align: right;">Total Route Amount:</td>
+          <td style="text-align: right; font-size: 13px; color: #000;">₹${totalAmount.toLocaleString('en-IN')}</td>
+        </tr>
+      </tbody>
     </table>
   </div>
 </body>

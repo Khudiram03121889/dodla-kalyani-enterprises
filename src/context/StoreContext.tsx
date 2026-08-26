@@ -30,6 +30,10 @@ interface StoreContextType {
     executivePhone: string;
     items: { product: Product; qty: number }[];
   }) => Promise<Order>;
+  updateOrder: (
+    orderId: string,
+    items: { product: Product; qty: number }[]
+  ) => Promise<Order>;
   markOrderAsPrinted: (orderId: string) => Promise<void>;
   refreshData: () => Promise<void>;
 }
@@ -101,105 +105,13 @@ const SEED_SHOPS: Shop[] = [
 ];
 
 const SEED_CATEGORIES: Category[] = [
-  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Dodla Milk & Curd', display_order: 1 },
-  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Dodla Ghee & Butter', display_order: 2 },
-  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Dodla Paneer & Sweets', display_order: 3 },
-  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Dodla Flavoured Milk', display_order: 4 },
-  { id: 'c0000000-0000-0000-0000-000000000005', name: 'Beverages & Dairy Snacks', display_order: 5 },
+  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Badam Milk', display_order: 1 },
+  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Soan Papdi', display_order: 2 },
+  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Gulab Jamun', display_order: 3 },
+  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Doodh Pedha', display_order: 4 },
 ];
 
-const SEED_PRODUCTS: Product[] = [
-  {
-    id: 'f7fce4fe-9b63-45da-9a0a-a111cfa82923',
-    category_id: 'c0000000-0000-0000-0000-000000000001',
-    name: 'Dodla Toned Milk 500ml',
-    hsn_code: '04012000',
-    rate: 27.0,
-    stock_qty: 150,
-    gst_rate: 5.0,
-  },
-  {
-    id: 'f8ece4b1-3bd2-4f5b-a137-efcae19d5ee8',
-    category_id: 'c0000000-0000-0000-0000-000000000001',
-    name: 'Dodla Full Cream Milk 500ml',
-    hsn_code: '04012000',
-    rate: 33.0,
-    stock_qty: 120,
-    gst_rate: 5.0,
-  },
-  {
-    id: '332ecacd-807b-42d0-a5e2-4e78be8f6186',
-    category_id: 'c0000000-0000-0000-0000-000000000001',
-    name: 'Dodla Premium Curd 500g',
-    hsn_code: '04031000',
-    rate: 35.0,
-    stock_qty: 80,
-    gst_rate: 5.0,
-  },
-  {
-    id: '87519930-149c-432b-9430-7cab29b028cc',
-    category_id: 'c0000000-0000-0000-0000-000000000002',
-    name: 'Dodla Pure Cow Ghee 500ml',
-    hsn_code: '04059020',
-    rate: 340.0,
-    stock_qty: 50,
-    gst_rate: 5.0,
-  },
-  {
-    id: '143c3777-f96d-4837-9ab2-679a6d80d073',
-    category_id: 'c0000000-0000-0000-0000-000000000002',
-    name: 'Dodla Table Butter 100g',
-    hsn_code: '04051000',
-    rate: 58.0,
-    stock_qty: 60,
-    gst_rate: 5.0,
-  },
-  {
-    id: '2284c34d-5d05-4ae4-bd52-f843863647a2',
-    category_id: 'c0000000-0000-0000-0000-000000000003',
-    name: 'Dodla Fresh Paneer 200g',
-    hsn_code: '04061000',
-    rate: 95.0,
-    stock_qty: 45,
-    gst_rate: 5.0,
-  },
-  {
-    id: '91329792-985d-4200-9ee6-7a1cc09e98e5',
-    category_id: 'c0000000-0000-0000-0000-000000000003',
-    name: 'Dodla Doodh Peda 250g',
-    hsn_code: '21069099',
-    rate: 140.0,
-    stock_qty: 30,
-    gst_rate: 5.0,
-  },
-  {
-    id: 'e54ab957-fce9-4c97-91c4-129064e0fc1e',
-    category_id: 'c0000000-0000-0000-0000-000000000004',
-    name: 'Dodla Badam Milk 200ml Bottle',
-    hsn_code: '22029990',
-    rate: 35.0,
-    stock_qty: 100,
-    gst_rate: 5.0,
-  },
-  {
-    id: 'ec985e41-3a18-4671-ae92-7e38c4307738',
-    category_id: 'c0000000-0000-0000-0000-000000000004',
-    name: 'Dodla Pista Flavoured Milk 200ml',
-    hsn_code: '22029990',
-    rate: 35.0,
-    stock_qty: 90,
-    gst_rate: 5.0,
-  },
-  {
-    id: 'c024b5bc-a45f-4ae9-a6ff-ac27853897d2',
-    category_id: 'c0000000-0000-0000-0000-000000000005',
-    name: 'Dodla Spiced Buttermilk 200ml Pouch',
-    hsn_code: '04039010',
-    rate: 12.0,
-    stock_qty: 200,
-    gst_rate: 5.0,
-  },
-];
+const SEED_PRODUCTS: Product[] = [];
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
@@ -531,7 +443,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       params.items.map((i) => ({ qty: i.qty, rate: i.product.rate, gstRate: i.product.gst_rate }))
     );
 
-    const { orderNo, invoiceNo } = generateOrderNumbers();
+    const { orderNo, invoiceNo } = generateOrderNumbers(orders.length);
     let orderId = generateUUID();
 
     // 2. Prepare Order Items
@@ -545,9 +457,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         order_id: orderId,
         product_id: item.product.id,
         product_name: item.product.name,
-        category_name: matchedCat?.name || 'Dairy',
+        category_name: matchedCat?.name || 'General',
+        hsn_code: item.product.hsn_code,
         qty: item.qty,
         rate: item.product.rate,
+        amount: lineTaxable,
         taxable_amount: lineTaxable,
         gst_rate: item.product.gst_rate || 5.0,
         gst_amount: lineGst,
@@ -662,6 +576,129 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return newOrder;
   };
 
+  const updateOrder = async (
+    orderId: string,
+    items: { product: Product; qty: number }[]
+  ): Promise<Order> => {
+    const existingOrder = orders.find((o) => o.id === orderId);
+    if (!existingOrder) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+
+    // 1. Calculate tax and totals with updated items
+    const activeItems = items.filter((i) => i.qty > 0);
+    const taxCalc = calculateOrderTax(
+      activeItems.map((i) => ({
+        qty: i.qty,
+        rate: i.product.rate,
+        gstRate: i.product.gst_rate,
+      }))
+    );
+
+    // 2. Prepare updated Order Items
+    const updatedOrderItems: OrderItem[] = activeItems.map((item) => {
+      const lineTaxable = Number((item.qty * item.product.rate).toFixed(2));
+      const lineGst = Number(((lineTaxable * (item.product.gst_rate || 5.0)) / 100).toFixed(2));
+      const matchedCat = categories.find((c) => c.id === item.product.category_id);
+
+      return {
+        id: generateUUID(),
+        order_id: orderId,
+        product_id: item.product.id,
+        product_name: item.product.name,
+        category_name: matchedCat?.name || 'General',
+        hsn_code: item.product.hsn_code,
+        qty: item.qty,
+        rate: item.product.rate,
+        amount: lineTaxable,
+        taxable_amount: lineTaxable,
+        gst_rate: item.product.gst_rate || 5.0,
+        gst_amount: lineGst,
+        total_amount: Number((lineTaxable + lineGst).toFixed(2)),
+      };
+    });
+
+    // 3. Adjust Stock in Godown: compare old order qty vs new order qty
+    const oldQtyMap: Record<string, number> = {};
+    (existingOrder.items || []).forEach((oi) => {
+      oldQtyMap[oi.product_id] = (oldQtyMap[oi.product_id] || 0) + oi.qty;
+    });
+
+    const newQtyMap: Record<string, number> = {};
+    activeItems.forEach((ai) => {
+      newQtyMap[ai.product.id] = (newQtyMap[ai.product.id] || 0) + ai.qty;
+    });
+
+    const updatedProducts = products.map((p) => {
+      const oldQty = oldQtyMap[p.id] || 0;
+      const newQty = newQtyMap[p.id] || 0;
+      const delta = oldQty - newQty; // If new is higher, stock decreases; if new is lower, stock increases
+      if (delta !== 0) {
+        return { ...p, stock_qty: Math.max(0, p.stock_qty + delta) };
+      }
+      return p;
+    });
+
+    setProducts(updatedProducts);
+    await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
+
+    // 4. Create updated Order object
+    const updatedOrder: Order = {
+      ...existingOrder,
+      total_qty: taxCalc.totalQty,
+      taxable_amount: taxCalc.taxableAmount,
+      cgst_amount: taxCalc.cgstAmount,
+      sgst_amount: taxCalc.sgstAmount,
+      total_gst: taxCalc.totalGstAmount,
+      round_off: taxCalc.roundOff,
+      grand_total: taxCalc.grandTotal,
+      items: updatedOrderItems,
+    };
+
+    // 5. Update local orders state
+    const updatedOrders = orders.map((o) => (o.id === orderId ? updatedOrder : o));
+    setOrders(updatedOrders);
+    await AsyncStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(updatedOrders));
+
+    // 6. Push updates to Supabase if configured
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase
+          .from('dodla_orders')
+          .update({
+            total_qty: updatedOrder.total_qty,
+            taxable_amount: updatedOrder.taxable_amount,
+            cgst_amount: updatedOrder.cgst_amount,
+            sgst_amount: updatedOrder.sgst_amount,
+            total_gst: updatedOrder.total_gst,
+            round_off: updatedOrder.round_off,
+            grand_total: updatedOrder.grand_total,
+          })
+          .eq('id', orderId);
+
+        // Delete old items and insert updated items
+        await supabase.from('dodla_order_items').delete().eq('order_id', orderId);
+        const supabaseItemsPayload = updatedOrderItems.map((oi) => ({
+          order_id: orderId,
+          product_id: oi.product_id,
+          product_name: oi.product_name,
+          category_name: oi.category_name,
+          qty: oi.qty,
+          rate: oi.rate,
+          taxable_amount: oi.taxable_amount,
+          gst_rate: oi.gst_rate,
+          gst_amount: oi.gst_amount,
+          total_amount: oi.total_amount,
+        }));
+        await supabase.from('dodla_order_items').insert(supabaseItemsPayload);
+      } catch (e) {
+        console.warn('Supabase update order error:', e);
+      }
+    }
+
+    return updatedOrder;
+  };
+
   const markOrderAsPrinted = async (orderId: string): Promise<void> => {
     const updated = orders.map((o) =>
       o.id === orderId
@@ -706,6 +743,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteProduct,
         updateStock,
         punchOrder,
+        updateOrder,
         markOrderAsPrinted,
         refreshData: loadAllData,
       }}

@@ -50,8 +50,10 @@ export interface OrderItem {
   product_id: string;
   product_name: string;
   category_name: string;
+  hsn_code?: string;
   qty: number;
   rate: number;
+  amount?: number;
   taxable_amount: number;
   gst_rate: number;
   gst_amount: number;

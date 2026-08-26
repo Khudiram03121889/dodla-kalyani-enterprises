@@ -7,10 +7,10 @@ import {
   StyleSheet,
   TextInput,
   Alert,
-  SafeAreaView,
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
@@ -19,6 +19,7 @@ import { calculateOrderTax } from '../../utils/taxCalculator';
 import { formatCurrency } from '../../utils/formatters';
 
 export const PunchOrderScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
@@ -132,9 +133,14 @@ export const PunchOrderScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header Banner */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
@@ -194,7 +200,10 @@ export const PunchOrderScreen: React.FC = () => {
       <FlatList
         data={filteredProducts}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.productList}
+        contentContainerStyle={[
+          styles.productList,
+          { paddingBottom: 220 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
           const qty = orderQuantities[item.id] || 0;
@@ -318,7 +327,7 @@ export const PunchOrderScreen: React.FC = () => {
       />
 
       {/* Live Order Calculation Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
         <View style={styles.footerSummary}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Total Items:</Text>
@@ -372,12 +381,8 @@ export const PunchOrderScreen: React.FC = () => {
 
               <View style={styles.successDetails}>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailKey}>Order No:</Text>
-                  <Text style={styles.detailVal}>{successOrder.order_no}</Text>
-                </View>
-                <View style={styles.detailRow}>
                   <Text style={styles.detailKey}>Invoice No:</Text>
-                  <Text style={styles.detailVal}>{successOrder.invoice_no}</Text>
+                  <Text style={[styles.detailVal, { fontWeight: '800' }]}>{successOrder.invoice_no}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailKey}>Shop:</Text>
@@ -408,7 +413,7 @@ export const PunchOrderScreen: React.FC = () => {
           </View>
         </Modal>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
