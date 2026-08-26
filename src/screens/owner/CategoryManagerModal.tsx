@@ -8,6 +8,7 @@ import {
   StyleSheet,
   FlatList,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
 import { Category } from '../../types';
@@ -21,31 +22,72 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   visible,
   onClose,
 }) => {
-  const { categories, addCategory, deleteCategory } = useStore();
+  const { categories, products, addCategory, updateCategory, deleteCategory } = useStore();
   const [newCatName, setNewCatName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatName, setEditingCatName] = useState('');
 
   const handleAddCategory = async () => {
-    if (!newCatName.trim()) {
+    const trimmed = newCatName.trim();
+    if (!trimmed) {
       Alert.alert('Required', 'Please enter a category name.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await addCategory(newCatName.trim());
+      await addCategory(trimmed);
       setNewCatName('');
       setIsSubmitting(false);
-    } catch (e) {
+      Alert.alert('Category Added', `"${trimmed}" has been created and synced with database.`);
+    } catch (e: any) {
       setIsSubmitting(false);
-      Alert.alert('Error', 'Failed to add category.');
+      Alert.alert('Failed to Add', e.message || 'Error occurred while saving to database.');
+    }
+  };
+
+  const startEdit = (cat: Category) => {
+    setEditingCatId(cat.id);
+    setEditingCatName(cat.name);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCatId) return;
+    const trimmed = editingCatName.trim();
+    if (!trimmed) {
+      Alert.alert('Required', 'Category name cannot be empty.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await updateCategory(editingCatId, trimmed);
+      setEditingCatId(null);
+      setEditingCatName('');
+      setIsSubmitting(false);
+      Alert.alert('Success', `Category renamed to "${trimmed}".`);
+    } catch (e: any) {
+      setIsSubmitting(false);
+      Alert.alert('Failed to Update', e.message || 'Error occurred while updating in database.');
     }
   };
 
   const handleDelete = (cat: Category) => {
+    const linkedProducts = products.filter((p) => p.category_id === cat.id);
+    if (linkedProducts.length > 0) {
+      Alert.alert(
+        'Cannot Delete Category',
+        `"${cat.name}" has ${linkedProducts.length} active product(s) in Godown inventory:\n\n${linkedProducts
+          .map((p) => `• ${p.name}`)
+          .join('\n')}\n\nPlease delete or reassign these products before deleting this category.`
+      );
+      return;
+    }
+
     Alert.alert(
       'Delete Category',
-      `Are you sure you want to delete "${cat.name}"?`,
+      `Are you sure you want to permanently delete "${cat.name}" from the database?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -53,8 +95,12 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
+              setIsSubmitting(true);
               await deleteCategory(cat.id);
+              setIsSubmitting(false);
+              Alert.alert('Deleted', `Category "${cat.name}" was removed successfully.`);
             } catch (err: any) {
+              setIsSubmitting(false);
               Alert.alert('Cannot Delete Category', err.message || 'Failed to delete category.');
             }
           },
@@ -68,20 +114,22 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.header}>
-            <Text style={styles.title}>Manage Categories</Text>
-            <TouchableOpacity onPress={onClose}>
+            <View>
+              <Text style={styles.title}>Manage Categories</Text>
+              <Text style={styles.sub}>
+                Add, rename, or delete Godown categories ({categories.length} total)
+              </Text>
+            </View>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.close}>✕</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.sub}>
-            Create and organize product categories in your Godown (e.g. Milk & Curd, Ghee & Butter, Sweets).
-          </Text>
 
           {/* Add Category Bar */}
           <View style={styles.addRow}>
             <TextInput
               style={styles.input}
-              placeholder="New Category Name (e.g. Dodla Sweets)"
+              placeholder="New Category Name..."
               placeholderTextColor="#9CA3AF"
               value={newCatName}
               onChangeText={setNewCatName}
@@ -91,34 +139,85 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               onPress={handleAddCategory}
               disabled={isSubmitting}
             >
-              <Text style={styles.addBtnText}>+ Add</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.addBtnText}>+ Add</Text>
+              )}
             </TouchableOpacity>
           </View>
 
+          {/* Inline Edit Bar if editing */}
+          {editingCatId && (
+            <View style={styles.editRow}>
+              <Text style={styles.editLabel}>Editing:</Text>
+              <TextInput
+                style={[styles.input, styles.editInput]}
+                value={editingCatName}
+                onChangeText={setEditingCatName}
+                placeholder="Category name"
+                placeholderTextColor="#9CA3AF"
+                autoFocus
+              />
+              <TouchableOpacity
+                style={styles.saveEditBtn}
+                onPress={handleSaveEdit}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.saveEditBtnText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelEditBtn}
+                onPress={() => setEditingCatId(null)}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.cancelEditBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Existing Categories List */}
-          <Text style={styles.listHeader}>Current Categories ({categories.length}):</Text>
+          <Text style={styles.listHeader}>Categories in Godown:</Text>
           <FlatList
             data={categories}
             keyExtractor={(item) => item.id}
             style={styles.catList}
-            renderItem={({ item, index }) => (
-              <View style={styles.catRow}>
-                <View style={styles.catInfo}>
-                  <Text style={styles.catNum}>{index + 1}.</Text>
-                  <Text style={styles.catName}>{item.name}</Text>
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item, index }) => {
+              const productCount = products.filter((p) => p.category_id === item.id).length;
+              return (
+                <View style={styles.catRow}>
+                  <View style={styles.catInfo}>
+                    <Text style={styles.catNum}>{index + 1}.</Text>
+                    <View>
+                      <Text style={styles.catName}>{item.name}</Text>
+                      <Text style={styles.catSub}>
+                        {productCount} item{productCount === 1 ? '' : 's'} assigned
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.catActions}>
+                    <TouchableOpacity
+                      style={styles.editBtn}
+                      onPress={() => startEdit(item)}
+                    >
+                      <Text style={styles.editBtnText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.delBtn}
+                      onPress={() => handleDelete(item)}
+                    >
+                      <Text style={styles.delBtnText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <TouchableOpacity
-                  style={styles.delBtn}
-                  onPress={() => handleDelete(item)}
-                >
-                  <Text style={styles.delBtnText}>Delete</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              );
+            }}
           />
 
           <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
-            <Text style={styles.doneBtnText}>Close</Text>
+            <Text style={styles.doneBtnText}>Done</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -137,7 +236,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    maxHeight: '80%',
+    maxHeight: '85%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -147,7 +246,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   title: {
     fontSize: 18,
@@ -155,21 +255,62 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   close: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#6B7280',
     fontWeight: 'bold',
     padding: 4,
   },
   sub: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#6B7280',
     marginTop: 2,
-    marginBottom: 16,
   },
   addRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  editRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+    backgroundColor: '#EFF6FF',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  editLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E40AF',
+  },
+  editInput: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 6,
+  },
+  saveEditBtn: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  saveEditBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  cancelEditBtn: {
+    backgroundColor: '#E5E7EB',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  cancelEditBtnText: {
+    color: '#4B5563',
+    fontSize: 12,
+    fontWeight: '700',
   },
   input: {
     flex: 1,
@@ -188,6 +329,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 70,
   },
   btnDisabled: {
     opacity: 0.6,
@@ -204,7 +346,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   catList: {
-    maxHeight: 250,
+    maxHeight: 260,
     marginBottom: 16,
   },
   catRow: {
@@ -219,7 +361,8 @@ const styles = StyleSheet.create({
   catInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    flex: 1,
   },
   catNum: {
     fontSize: 13,
@@ -231,9 +374,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
   },
+  catSub: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  catActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  editBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 4,
+  },
+  editBtnText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   delBtn: {
     paddingHorizontal: 8,
     paddingVertical: 4,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 4,
   },
   delBtnText: {
     color: '#DC2626',
@@ -241,13 +407,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   doneBtn: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#1E3A8A',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   doneBtnText: {
-    color: '#374151',
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },

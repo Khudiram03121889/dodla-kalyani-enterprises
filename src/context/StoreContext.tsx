@@ -105,13 +105,105 @@ const SEED_SHOPS: Shop[] = [
 ];
 
 const SEED_CATEGORIES: Category[] = [
-  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Badam Milk', display_order: 1 },
-  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Soan Papdi', display_order: 2 },
-  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Gulab Jamun', display_order: 3 },
-  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Doodh Pedha', display_order: 4 },
+  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Dodla Milk & Curd', display_order: 1 },
+  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Dodla Ghee & Butter', display_order: 2 },
+  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Dodla Paneer & Sweets', display_order: 3 },
+  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Dodla Flavoured Milk', display_order: 4 },
+  { id: 'c0000000-0000-0000-0000-000000000005', name: 'Beverages & Dairy Snacks', display_order: 5 },
 ];
 
-const SEED_PRODUCTS: Product[] = [];
+const SEED_PRODUCTS: Product[] = [
+  {
+    id: 'f7fce4fe-9b63-45da-9a0a-a111cfa82923',
+    category_id: 'c0000000-0000-0000-0000-000000000001',
+    name: 'Dodla Toned Milk 500ml',
+    hsn_code: '04012000',
+    rate: 27.0,
+    stock_qty: 150,
+    gst_rate: 5.0,
+  },
+  {
+    id: 'f8ece4b1-3bd2-4f5b-a137-efcae19d5ee8',
+    category_id: 'c0000000-0000-0000-0000-000000000001',
+    name: 'Dodla Full Cream Milk 500ml',
+    hsn_code: '04012000',
+    rate: 33.0,
+    stock_qty: 120,
+    gst_rate: 5.0,
+  },
+  {
+    id: '332ecacd-807b-42d0-a5e2-4e78be8f6186',
+    category_id: 'c0000000-0000-0000-0000-000000000001',
+    name: 'Dodla Premium Curd 500g',
+    hsn_code: '04031000',
+    rate: 35.0,
+    stock_qty: 80,
+    gst_rate: 5.0,
+  },
+  {
+    id: '87519930-149c-432b-9430-7cab29b028cc',
+    category_id: 'c0000000-0000-0000-0000-000000000002',
+    name: 'Dodla Pure Cow Ghee 500ml',
+    hsn_code: '04059020',
+    rate: 340.0,
+    stock_qty: 50,
+    gst_rate: 5.0,
+  },
+  {
+    id: '143c3777-f96d-4837-9ab2-679a6d80d073',
+    category_id: 'c0000000-0000-0000-0000-000000000002',
+    name: 'Dodla Table Butter 100g',
+    hsn_code: '04051000',
+    rate: 58.0,
+    stock_qty: 60,
+    gst_rate: 5.0,
+  },
+  {
+    id: '2284c34d-5d05-4ae4-bd52-f843863647a2',
+    category_id: 'c0000000-0000-0000-0000-000000000003',
+    name: 'Dodla Fresh Paneer 200g',
+    hsn_code: '04061000',
+    rate: 95.0,
+    stock_qty: 45,
+    gst_rate: 5.0,
+  },
+  {
+    id: '91329792-985d-4200-9ee6-7a1cc09e98e5',
+    category_id: 'c0000000-0000-0000-0000-000000000003',
+    name: 'Dodla Doodh Peda 250g',
+    hsn_code: '21069099',
+    rate: 140.0,
+    stock_qty: 30,
+    gst_rate: 5.0,
+  },
+  {
+    id: 'e54ab957-fce9-4c97-91c4-129064e0fc1e',
+    category_id: 'c0000000-0000-0000-0000-000000000004',
+    name: 'Dodla Badam Milk 200ml Bottle',
+    hsn_code: '22029990',
+    rate: 35.0,
+    stock_qty: 100,
+    gst_rate: 5.0,
+  },
+  {
+    id: 'ec985e41-3a18-4671-ae92-7e38c4307738',
+    category_id: 'c0000000-0000-0000-0000-000000000004',
+    name: 'Dodla Pista Flavoured Milk 200ml',
+    hsn_code: '22029990',
+    rate: 35.0,
+    stock_qty: 90,
+    gst_rate: 5.0,
+  },
+  {
+    id: 'c024b5bc-a45f-4ae9-a6ff-ac27853897d2',
+    category_id: 'c0000000-0000-0000-0000-000000000005',
+    name: 'Dodla Spiced Buttermilk 200ml Pouch',
+    hsn_code: '04039010',
+    rate: 12.0,
+    stock_qty: 200,
+    gst_rate: 5.0,
+  },
+];
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
@@ -150,14 +242,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (shopsRes.data && !shopsRes.error) {
           setShops(shopsRes.data);
           await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(shopsRes.data));
+          remoteSuccess = true;
         }
         if (catsRes.data && !catsRes.error) {
           setCategories(catsRes.data);
           await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(catsRes.data));
+          remoteSuccess = true;
         }
         if (prodsRes.data && !prodsRes.error) {
           setProducts(prodsRes.data);
           await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(prodsRes.data));
+          remoteSuccess = true;
         }
         if (ordersRes.data && !ordersRes.error) {
           // Read local orders to preserve any unsynced offline orders
@@ -173,6 +268,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
           setOrders(mergedOrders);
           await AsyncStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(mergedOrders));
+          remoteSuccess = true;
 
           // Background sync unsynced orders to Supabase
           if (unsyncedOrders.length > 0) {
@@ -246,8 +342,33 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const initialRoutes = savedRoutes ? JSON.parse(savedRoutes) : SEED_ROUTES;
       const initialShops = savedShops ? JSON.parse(savedShops) : SEED_SHOPS;
-      const initialCats = savedCats ? JSON.parse(savedCats) : SEED_CATEGORIES;
-      const initialProds = savedProds ? JSON.parse(savedProds) : SEED_PRODUCTS;
+      
+      // Sanitize categories: if legacy dummy categories are detected, use SEED_CATEGORIES
+      let initialCats: Category[] = SEED_CATEGORIES;
+      if (savedCats) {
+        try {
+          const parsed = JSON.parse(savedCats);
+          const hasLegacyDummy = parsed.some((c: Category) => c.name === 'Soan Papdi' || c.name === 'Gulab Jamun' || c.name === 'Doodh Pedha');
+          if (!hasLegacyDummy && Array.isArray(parsed) && parsed.length > 0) {
+            initialCats = parsed;
+          }
+        } catch {
+          initialCats = SEED_CATEGORIES;
+        }
+      }
+
+      let initialProds: Product[] = SEED_PRODUCTS;
+      if (savedProds) {
+        try {
+          const parsed = JSON.parse(savedProds);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            initialProds = parsed;
+          }
+        } catch {
+          initialProds = SEED_PRODUCTS;
+        }
+      }
+
       const initialOrders = savedOrders ? JSON.parse(savedOrders) : [];
 
       setRoutes(initialRoutes);
@@ -256,10 +377,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setProducts(initialProds);
       setOrders(initialOrders);
 
-      if (!savedRoutes) await AsyncStorage.setItem(STORAGE_KEYS.ROUTES, JSON.stringify(initialRoutes));
-      if (!savedShops) await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(initialShops));
-      if (!savedCats) await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(initialCats));
-      if (!savedProds) await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(initialProds));
+      await AsyncStorage.setItem(STORAGE_KEYS.ROUTES, JSON.stringify(initialRoutes));
+      await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(initialShops));
+      await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(initialCats));
+      await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(initialProds));
       if (!savedOrders) await AsyncStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(initialOrders));
     } catch (err) {
       console.warn('Error loading local store data:', err);
@@ -315,6 +436,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addCategory = async (name: string): Promise<Category> => {
     const trimmed = name.trim();
+    if (!trimmed) {
+      throw new Error('Category name cannot be empty.');
+    }
+
     const newCat: Category = {
       id: generateUUID(),
       name: trimmed,
@@ -326,12 +451,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         const { data, error } = await supabase
           .from('dodla_categories')
-          .insert([{ name: trimmed, display_order: newCat.display_order }])
+          .insert([{ id: newCat.id, name: trimmed, display_order: newCat.display_order }])
           .select()
           .single();
-        if (data && !error) newCat.id = data.id;
-      } catch (e) {
-        console.warn('Supabase category insert error:', e);
+        if (error) {
+          console.error('Supabase category insert error:', error);
+          throw new Error(error.message || 'Failed to insert category in database');
+        }
+        if (data) {
+          newCat.id = data.id;
+          newCat.created_at = data.created_at;
+        }
+      } catch (e: any) {
+        console.error('addCategory error:', e);
+        throw e;
       }
     }
 
@@ -342,37 +475,45 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateCategory = async (id: string, name: string): Promise<void> => {
-    const updated = categories.map((c) => (c.id === id ? { ...c, name: name.trim() } : c));
-    setCategories(updated);
-    await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated));
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new Error('Category name cannot be empty.');
+    }
 
     if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase.from('dodla_categories').update({ name: name.trim() }).eq('id', id);
-      } catch (e) {
-        console.warn('Supabase category update error:', e);
+      const { error } = await supabase.from('dodla_categories').update({ name: trimmed }).eq('id', id);
+      if (error) {
+        console.error('Supabase category update error:', error);
+        throw new Error(error.message || 'Failed to update category in database');
       }
     }
+
+    const updated = categories.map((c) => (c.id === id ? { ...c, name: trimmed } : c));
+    setCategories(updated);
+    await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated));
   };
 
   const deleteCategory = async (id: string): Promise<void> => {
-    // Check if any products use this category
-    const hasProducts = products.some((p) => p.category_id === id);
-    if (hasProducts) {
-      throw new Error('Cannot delete category because it contains active products. Delete or move the products first.');
+    // 1. Check if any products use this category
+    const linkedProducts = products.filter((p) => p.category_id === id);
+    if (linkedProducts.length > 0) {
+      const names = linkedProducts.map((p) => `"${p.name}"`).join(', ');
+      throw new Error(`Cannot delete category because ${linkedProducts.length} product(s) belong to it: ${names}. Delete or reassign the products first.`);
     }
 
+    // 2. Perform Supabase deletion
+    if (isSupabaseConfigured() && supabase) {
+      const { error } = await supabase.from('dodla_categories').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase category delete error:', error);
+        throw new Error(error.message || 'Failed to delete category in database');
+      }
+    }
+
+    // 3. Update local state
     const updated = categories.filter((c) => c.id !== id);
     setCategories(updated);
     await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated));
-
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase.from('dodla_categories').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Supabase category delete error:', e);
-      }
-    }
   };
 
   const addProduct = async (productData: Omit<Product, 'id' | 'created_at'>): Promise<Product> => {
@@ -384,10 +525,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { data, error } = await supabase.from('dodla_products').insert([productData]).select().single();
-        if (data && !error) newProd.id = data.id;
-      } catch (e) {
-        console.warn('Supabase product insert error:', e);
+        const { data, error } = await supabase
+          .from('dodla_products')
+          .insert([{
+            id: newProd.id,
+            category_id: productData.category_id,
+            name: productData.name,
+            hsn_code: productData.hsn_code,
+            rate: productData.rate,
+            stock_qty: productData.stock_qty,
+            gst_rate: productData.gst_rate,
+          }])
+          .select()
+          .single();
+        if (error) {
+          console.error('Supabase product insert error:', error);
+          throw new Error(error.message || 'Failed to insert product in database');
+        }
+        if (data) {
+          newProd.id = data.id;
+          newProd.created_at = data.created_at;
+        }
+      } catch (e: any) {
+        console.error('addProduct error:', e);
+        throw e;
       }
     }
 
@@ -398,31 +559,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateProduct = async (id: string, updates: Partial<Product>): Promise<void> => {
+    if (isSupabaseConfigured() && supabase) {
+      const { error } = await supabase.from('dodla_products').update(updates).eq('id', id);
+      if (error) {
+        console.error('Supabase product update error:', error);
+        throw new Error(error.message || 'Failed to update product in database');
+      }
+    }
+
     const updated = products.map((p) => (p.id === id ? { ...p, ...updates } : p));
     setProducts(updated);
     await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(updated));
-
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase.from('dodla_products').update(updates).eq('id', id);
-      } catch (e) {
-        console.warn('Supabase product update error:', e);
-      }
-    }
   };
 
   const deleteProduct = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured() && supabase) {
+      const { error } = await supabase.from('dodla_products').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase product delete error:', error);
+        throw new Error(error.message || 'Failed to delete product in database');
+      }
+    }
+
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
     await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(updated));
-
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase.from('dodla_products').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Supabase product delete error:', e);
-      }
-    }
   };
 
   const updateStock = async (productId: string, newStockQty: number): Promise<void> => {
