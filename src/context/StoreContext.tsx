@@ -107,11 +107,10 @@ const SEED_SHOPS: Shop[] = [
 ];
 
 const SEED_CATEGORIES: Category[] = [
-  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Dodla Milk & Curd', hsn_code: '04012000', display_order: 1 },
-  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Dodla Ghee & Butter', hsn_code: '04059020', display_order: 2 },
-  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Dodla Paneer & Sweets', hsn_code: '21069099', display_order: 3 },
-  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Dodla Flavoured Milk', hsn_code: '22029990', display_order: 4 },
-  { id: 'c0000000-0000-0000-0000-000000000005', name: 'Beverages & Dairy Snacks', hsn_code: '04039010', display_order: 5 },
+  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Badam Milk', hsn_code: '22029990', display_order: 1 },
+  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Soan Papdi', hsn_code: '21069099', display_order: 2 },
+  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Gulab Jamun', hsn_code: '21069099', display_order: 3 },
+  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Doodh Pedha', hsn_code: '21069099', display_order: 4 },
 ];
 
 const SEED_PRODUCTS: Product[] = [];

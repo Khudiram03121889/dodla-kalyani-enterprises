@@ -33,16 +33,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
   const getHsnForCategory = (catId: string): string => {
     const cat = categories.find((c) => c.id === catId);
-    if (!cat) return '04012000';
+    if (!cat) return '21069099';
     if (cat.hsn_code) return cat.hsn_code;
     const catName = cat.name.toLowerCase();
-    if (catName.includes('milk') || catName.includes('curd')) return '04012000';
-    if (catName.includes('ghee') || catName.includes('butter')) return '04059020';
-    if (catName.includes('paneer')) return '04061000';
-    if (catName.includes('peda') || catName.includes('sweets') || catName.includes('papdi')) return '21069099';
-    if (catName.includes('flavoured') || catName.includes('badam')) return '22029990';
-    if (catName.includes('beverage') || catName.includes('buttermilk')) return '04039010';
-    return '04012000';
+    if (catName.includes('badam') || catName.includes('milk') || catName.includes('beverage')) return '22029990';
+    return '21069099';
   };
 
   const handleSelectCategory = (catId: string) => {
@@ -151,22 +146,41 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               <Text style={styles.label}>Product Name *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Dodla Pure Cow Ghee 500ml"
+                placeholder="e.g. Badam Milk 200ml or Soan Papdi 500g"
                 placeholderTextColor="#9CA3AF"
                 value={name}
                 onChangeText={setName}
               />
             </View>
 
-            {/* HSN Code */}
+            {/* HSN Code Selector */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>HSN / SAC Code</Text>
+              <Text style={styles.label}>Select HSN Number (for Invoice) *</Text>
+              <View style={styles.hsnPillsRow}>
+                <TouchableOpacity
+                  style={[styles.hsnPill, hsnCode === '22029990' && styles.hsnPillActive]}
+                  onPress={() => setHsnCode('22029990')}
+                >
+                  <Text style={[styles.hsnPillText, hsnCode === '22029990' && styles.hsnPillTextActive]}>
+                    22029990 (Badam Milk)
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.hsnPill, hsnCode === '21069099' && styles.hsnPillActive]}
+                  onPress={() => setHsnCode('21069099')}
+                >
+                  <Text style={[styles.hsnPillText, hsnCode === '21069099' && styles.hsnPillTextActive]}>
+                    21069099 (Sweets)
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. 04059020 or 21069099"
+                placeholder="HSN Code (e.g. 22029990 or 21069099)"
                 placeholderTextColor="#9CA3AF"
                 value={hsnCode}
                 onChangeText={setHsnCode}
+                keyboardType="number-pad"
               />
             </View>
 
@@ -176,7 +190,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 <Text style={styles.label}>Unit Rate (₹) *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. 48.57"
+                  placeholder="e.g. 35.00"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="decimal-pad"
                   value={rate}
@@ -304,6 +318,33 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   catPillTextActive: {
+    color: '#FFFFFF',
+  },
+  hsnPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  hsnPill: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  hsnPillActive: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
+  },
+  hsnPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  hsnPillTextActive: {
     color: '#FFFFFF',
   },
   input: {

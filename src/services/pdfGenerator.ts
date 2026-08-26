@@ -15,23 +15,23 @@ function escapeHtml(str?: string | null): string {
 }
 
 const CATEGORY_HSN_MAP: Record<string, string> = {
+  'badam milk': '22029990',
+  'soan papdi': '21069099',
+  'gulab jamun': '21069099',
+  'doodh pedha': '21069099',
+  'doodh peda': '21069099',
+  'sweets': '21069099',
+  'dodla flavoured milk': '22029990',
+  'dodla paneer & sweets': '21069099',
   'dodla milk & curd': '04012000',
   'dodla ghee & butter': '04059020',
-  'dodla paneer & sweets': '21069099',
-  'dodla flavoured milk': '22029990',
-  'beverages & dairy snacks': '04039010',
 };
 
 export function getCategoryHsn(catName?: string): string {
-  if (!catName) return '04012000';
+  if (!catName) return '21069099';
   const lower = catName.trim().toLowerCase();
   if (CATEGORY_HSN_MAP[lower]) return CATEGORY_HSN_MAP[lower];
-  if (lower.includes('milk') || lower.includes('curd')) return '04012000';
-  if (lower.includes('ghee') || lower.includes('butter')) return '04059020';
-  if (lower.includes('paneer')) return '04061000';
-  if (lower.includes('sweet') || lower.includes('peda') || lower.includes('papdi') || lower.includes('jamun')) return '21069099';
-  if (lower.includes('flavour') || lower.includes('badam')) return '22029990';
-  if (lower.includes('beverage') || lower.includes('snack') || lower.includes('buttermilk')) return '04039010';
+  if (lower.includes('badam') || lower.includes('flavour')) return '22029990';
   return '21069099';
 }
 
