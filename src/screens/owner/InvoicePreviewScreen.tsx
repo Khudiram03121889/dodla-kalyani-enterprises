@@ -193,47 +193,39 @@ export const InvoicePreviewScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Items Table (Discount column removed) */}
+          {/* Items Table (Rate column removed, HSN on same line as product name) */}
           <View style={styles.tableContainer}>
             <View style={styles.tableHeaderRow}>
               <Text style={[styles.th, { width: 24 }]}>Sr.</Text>
-              <Text style={[styles.th, { flex: 2.2, textAlign: 'left' }]}>Product Name</Text>
-              <Text style={[styles.th, { width: 28 }]}>Qty</Text>
-              <Text style={[styles.th, { width: 44 }]}>Rate</Text>
-              <Text style={[styles.th, { width: 48 }]}>Amount</Text>
-              <Text style={[styles.th, { width: 50 }]}>Taxable</Text>
+              <Text style={[styles.th, { flex: 2.6, textAlign: 'left' }]}>Product Name</Text>
+              <Text style={[styles.th, { width: 30 }]}>Qty</Text>
+              <Text style={[styles.th, { width: 50 }]}>Amount</Text>
+              <Text style={[styles.th, { width: 52 }]}>Taxable</Text>
               <Text style={[styles.th, { width: 30 }]}>GST</Text>
-              <Text style={[styles.th, { width: 44 }]}>GST ₹</Text>
-              <Text style={[styles.th, { width: 50 }]}>Total</Text>
+              <Text style={[styles.th, { width: 46 }]}>GST ₹</Text>
+              <Text style={[styles.th, { width: 52 }]}>Total</Text>
             </View>
 
             {currentOrder.items.map((item, idx) => (
               <View key={item.id} style={styles.tableRow}>
                 <Text style={[styles.td, { width: 24, textAlign: 'center' }]}>{idx + 1}</Text>
-                <Text style={[styles.td, { flex: 2.2, textAlign: 'left' }]}>
-                  <Text style={{ fontWeight: 'bold' }}>{item.product_name}</Text>
-                  {'\n'}
-                  <Text style={{ fontSize: 9, color: '#4B5563', fontWeight: '600' }}>
-                    HSN: {item.hsn_code || getCategoryHsn(item.category_name)}
-                  </Text>
+                <Text style={[styles.td, { flex: 2.6, textAlign: 'left', fontWeight: 'bold' }]}>
+                  {item.product_name} ( {item.hsn_code || getCategoryHsn(item.category_name)} )
                 </Text>
-                <Text style={[styles.td, { width: 28, textAlign: 'center' }]}>{item.qty}</Text>
-                <Text style={[styles.td, { width: 44, textAlign: 'right' }]}>
-                  {item.rate.toFixed(2)}
-                </Text>
-                <Text style={[styles.td, { width: 48, textAlign: 'right' }]}>
+                <Text style={[styles.td, { width: 30, textAlign: 'center' }]}>{item.qty}</Text>
+                <Text style={[styles.td, { width: 50, textAlign: 'right' }]}>
                   {(item.qty * item.rate).toFixed(2)}
                 </Text>
-                <Text style={[styles.td, { width: 50, textAlign: 'right' }]}>
+                <Text style={[styles.td, { width: 52, textAlign: 'right' }]}>
                   {item.taxable_amount.toFixed(2)}
                 </Text>
                 <Text style={[styles.td, { width: 30, textAlign: 'center' }]}>
                   {item.gst_rate}
                 </Text>
-                <Text style={[styles.td, { width: 44, textAlign: 'right' }]}>
+                <Text style={[styles.td, { width: 46, textAlign: 'right' }]}>
                   {item.gst_amount.toFixed(2)}
                 </Text>
-                <Text style={[styles.td, { width: 50, textAlign: 'right', fontWeight: 'bold' }]}>
+                <Text style={[styles.td, { width: 52, textAlign: 'right', fontWeight: 'bold' }]}>
                   {item.total_amount.toFixed(2)}
                 </Text>
               </View>
@@ -241,24 +233,23 @@ export const InvoicePreviewScreen: React.FC = () => {
 
             {/* Total Row */}
             <View style={[styles.tableRow, styles.tableTotalRow]}>
-              <Text style={[styles.td, { flex: 2.2, textAlign: 'right', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { flex: 2.6, textAlign: 'right', fontWeight: 'bold' }]}>
                 TOTAL:
               </Text>
-              <Text style={[styles.td, { width: 28, textAlign: 'center', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { width: 30, textAlign: 'center', fontWeight: 'bold' }]}>
                 {currentOrder.total_qty}
               </Text>
-              <Text style={[styles.td, { width: 44 }]}></Text>
-              <Text style={[styles.td, { width: 48, textAlign: 'right', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { width: 50, textAlign: 'right', fontWeight: 'bold' }]}>
                 ₹{currentOrder.taxable_amount.toFixed(2)}
               </Text>
-              <Text style={[styles.td, { width: 50, textAlign: 'right', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { width: 52, textAlign: 'right', fontWeight: 'bold' }]}>
                 ₹{currentOrder.taxable_amount.toFixed(2)}
               </Text>
               <Text style={[styles.td, { width: 30 }]}></Text>
-              <Text style={[styles.td, { width: 44, textAlign: 'right', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { width: 46, textAlign: 'right', fontWeight: 'bold' }]}>
                 ₹{currentOrder.total_gst.toFixed(2)}
               </Text>
-              <Text style={[styles.td, { width: 50, textAlign: 'right', fontWeight: 'bold' }]}>
+              <Text style={[styles.td, { width: 52, textAlign: 'right', fontWeight: 'bold' }]}>
                 ₹{(currentOrder.taxable_amount + currentOrder.total_gst).toFixed(2)}
               </Text>
             </View>

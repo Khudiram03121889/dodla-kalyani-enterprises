@@ -70,22 +70,23 @@ function generateInvoiceBoxContent(order: Order): string {
       : '';
 
   const itemRowsHtml = order.items
-    .map(
-      (item, idx) => `
+    .map((item, idx) => {
+      const hsn = item.hsn_code || getCategoryHsn(item.category_name);
+      return `
       <tr>
         <td style="text-align: center;">${idx + 1}</td>
-        <td style="text-align: left;"><strong>${escapeHtml(item.product_name)}</strong></td>
-        <td style="text-align: center; font-size: 8.5px; font-weight: bold;">${escapeHtml(item.hsn_code || getCategoryHsn(item.category_name))}</td>
+        <td style="text-align: left;">
+          ${escapeHtml(item.product_name)} ( ${escapeHtml(hsn)} )
+        </td>
         <td style="text-align: center;">${item.qty}</td>
-        <td style="text-align: right;">${item.rate.toFixed(2)}</td>
         <td style="text-align: right;">${(item.qty * item.rate).toFixed(2)}</td>
         <td style="text-align: right;">${item.taxable_amount.toFixed(2)}</td>
         <td style="text-align: center;">${item.gst_rate}</td>
         <td style="text-align: right;">${item.gst_amount.toFixed(2)}</td>
         <td style="text-align: right;"><strong>${item.total_amount.toFixed(2)}</strong></td>
       </tr>
-    `
-    )
+    `;
+    })
     .join('');
 
   return `
@@ -150,24 +151,21 @@ function generateInvoiceBoxContent(order: Order): string {
     <table class="items-table">
       <thead>
         <tr>
-          <th style="width: 22px;">Sr. No.</th>
+          <th style="width: 25px;">Sr. No.</th>
           <th>Product Name</th>
-          <th style="width: 58px;">HSN Code</th>
-          <th style="width: 28px;">Qty</th>
-          <th style="width: 44px;">Rate</th>
-          <th style="width: 48px;">Amount</th>
-          <th style="width: 52px;">Taxable Amt.</th>
-          <th style="width: 30px;">GST %</th>
-          <th style="width: 44px;">GST Amt</th>
-          <th style="width: 52px;">Total</th>
+          <th style="width: 32px;">Qty</th>
+          <th style="width: 55px;">Amount</th>
+          <th style="width: 58px;">Taxable Amt.</th>
+          <th style="width: 34px;">GST %</th>
+          <th style="width: 52px;">GST Amt</th>
+          <th style="width: 58px;">Total</th>
         </tr>
       </thead>
       <tbody>
         ${itemRowsHtml}
         <tr style="font-weight: bold; background: #fafafa;">
-          <td colspan="3" style="text-align: right;">TOTAL:</td>
+          <td colspan="2" style="text-align: right;">TOTAL:</td>
           <td style="text-align: center;">${order.total_qty}</td>
-          <td></td>
           <td style="text-align: right;">₹${order.taxable_amount.toFixed(2)}</td>
           <td style="text-align: right;">₹${order.taxable_amount.toFixed(2)}</td>
           <td></td>
