@@ -13,7 +13,9 @@ interface StoreContextType {
   orders: Order[];
   isLoading: boolean;
   addRoute: (name: string) => Promise<Route>;
+  deleteRoute: (id: string) => Promise<void>;
   addShop: (shop: Omit<Shop, 'id' | 'created_at'>) => Promise<Shop>;
+  deleteShop: (id: string) => Promise<void>;
   addCategory: (name: string) => Promise<Category>;
   updateCategory: (id: string, name: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
@@ -300,6 +302,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addRoute = async (name: string): Promise<Route> => {
     const trimmed = name.trim();
+    if (!trimmed) {
+      throw new Error('Route name cannot be empty.');
+    }
+
     const newRoute: Route = {
       id: generateUUID(),
       name: trimmed,
@@ -308,10 +314,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { data, error } = await supabase.from('dodla_routes').insert([{ name: trimmed }]).select().single();
-        if (data && !error) newRoute.id = data.id;
-      } catch (e) {
-        console.warn('Supabase route insert error:', e);
+        const { data, error } = await supabase
+          .from('dodla_routes')
+          .insert([{ id: newRoute.id, name: trimmed }])
+          .select()
+          .single();
+        if (error) {
+          console.error('Supabase route insert error:', error);
+          throw new Error(error.message || 'Failed to add route in database');
+        }
+        if (data) {
+          newRoute.id = data.id;
+          newRoute.created_at = data.created_at;
+        }
+      } catch (e: any) {
+        console.error('addRoute error:', e);
+        throw e;
       }
     }
 
@@ -319,6 +337,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setRoutes(updated);
     await AsyncStorage.setItem(STORAGE_KEYS.ROUTES, JSON.stringify(updated));
     return newRoute;
+  };
+
+  const deleteRoute = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured() && supabase) {
+      // 1. Delete associated shops in Supabase
+      const { error: shopErr } = await supabase.from('dodla_shops').delete().eq('route_id', id);
+      if (shopErr) {
+        console.error('Supabase delete route shops error:', shopErr);
+      }
+
+      // 2. Delete route in Supabase
+      const { error } = await supabase.from('dodla_routes').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase delete route error:', error);
+        throw new Error(error.message || 'Failed to delete route in database');
+      }
+    }
+
+    // 3. Update local state
+    const updatedRoutes = routes.filter((r) => r.id !== id);
+    const updatedShops = shops.filter((s) => s.route_id !== id);
+    setRoutes(updatedRoutes);
+    setShops(updatedShops);
+    await AsyncStorage.setItem(STORAGE_KEYS.ROUTES, JSON.stringify(updatedRoutes));
+    await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(updatedShops));
   };
 
   const addShop = async (shopData: Omit<Shop, 'id' | 'created_at'>): Promise<Shop> => {
@@ -330,10 +373,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { data, error } = await supabase.from('dodla_shops').insert([shopData]).select().single();
-        if (data && !error) newShop.id = data.id;
-      } catch (e) {
-        console.warn('Supabase shop insert error:', e);
+        const { data, error } = await supabase
+          .from('dodla_shops')
+          .insert([{
+            id: newShop.id,
+            route_id: shopData.route_id,
+            name: shopData.name.trim(),
+            phone: shopData.phone.trim(),
+            address: shopData.address.trim(),
+            incharge: shopData.incharge?.trim() || null,
+            gstin: shopData.gstin?.trim() || null,
+            fssai: shopData.fssai?.trim() || null,
+          }])
+          .select()
+          .single();
+        if (error) {
+          console.error('Supabase shop insert error:', error);
+          throw new Error(error.message || 'Failed to add shop in database');
+        }
+        if (data) {
+          newShop.id = data.id;
+          newShop.created_at = data.created_at;
+        }
+      } catch (e: any) {
+        console.error('addShop error:', e);
+        throw e;
       }
     }
 
@@ -341,6 +405,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setShops(updated);
     await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(updated));
     return newShop;
+  };
+
+  const deleteShop = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured() && supabase) {
+      const { error } = await supabase.from('dodla_shops').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase delete shop error:', error);
+        throw new Error(error.message || 'Failed to delete shop in database');
+      }
+    }
+
+    const updated = shops.filter((s) => s.id !== id);
+    setShops(updated);
+    await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(updated));
   };
 
   const addCategory = async (name: string): Promise<Category> => {
@@ -804,7 +882,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         orders,
         isLoading,
         addRoute,
+        deleteRoute,
         addShop,
+        deleteShop,
         addCategory,
         updateCategory,
         deleteCategory,

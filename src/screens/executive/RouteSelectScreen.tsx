@@ -17,13 +17,14 @@ import { useStore } from '../../context/StoreContext';
 import { Shop, Route } from '../../types';
 import { AddRouteModal } from './AddRouteModal';
 import { AddShopModal } from './AddShopModal';
+import { ManageRoutesModal } from './ManageRoutesModal';
 import { formatDate } from '../../utils/formatters';
 
 export const RouteSelectScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { user, logout } = useAuth();
-  const { routes, shops, orders, refreshData } = useStore();
+  const { routes, shops, orders, deleteRoute, deleteShop, refreshData } = useStore();
 
   const [selectedRouteId, setSelectedRouteId] = useState<string>(
     routes.length > 0 ? routes[0].id : ''
@@ -31,6 +32,7 @@ export const RouteSelectScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [menuVisible, setMenuVisible] = useState(false);
   const [addRouteModalVisible, setAddRouteModalVisible] = useState(false);
+  const [manageRoutesModalVisible, setManageRoutesModalVisible] = useState(false);
   const [addShopModalVisible, setAddShopModalVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -45,6 +47,8 @@ export const RouteSelectScreen: React.FC = () => {
   // Default selection if route list changes
   React.useEffect(() => {
     if (!selectedRouteId && routes.length > 0) {
+      setSelectedRouteId(routes[0].id);
+    } else if (selectedRouteId && !routes.some((r) => r.id === selectedRouteId) && routes.length > 0) {
       setSelectedRouteId(routes[0].id);
     }
   }, [routes, selectedRouteId]);
@@ -70,6 +74,28 @@ export const RouteSelectScreen: React.FC = () => {
       routeId: activeRoute?.id || selectedRouteId,
       routeName: activeRoute?.name || 'Default Route',
     });
+  };
+
+  const handleDeleteShop = (shop: Shop) => {
+    Alert.alert(
+      'Delete Shop',
+      `Are you sure you want to permanently delete "${shop.name}" from ${activeRoute?.name || 'this route'}?\n\nThis will sync with the database immediately.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Shop',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteShop(shop.id);
+              Alert.alert('Shop Deleted', `"${shop.name}" was removed successfully.`);
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to delete shop in database.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -98,9 +124,20 @@ export const RouteSelectScreen: React.FC = () => {
       <View style={styles.routeSection}>
         <View style={styles.routeHeaderRow}>
           <Text style={styles.sectionTitle}>SELECT DELIVERY ROUTE</Text>
-          <TouchableOpacity onPress={() => setAddRouteModalVisible(true)}>
-            <Text style={styles.addRouteLink}>+ Add Route</Text>
-          </TouchableOpacity>
+          <View style={styles.routeHeaderActions}>
+            <TouchableOpacity
+              style={styles.manageRouteLinkBtn}
+              onPress={() => setManageRoutesModalVisible(true)}
+            >
+              <Text style={styles.manageRouteLinkText}>⚙️ Manage</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addRouteLinkBtn}
+              onPress={() => setAddRouteModalVisible(true)}
+            >
+              <Text style={styles.addRouteLink}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <FlatList
@@ -290,20 +327,40 @@ export const RouteSelectScreen: React.FC = () => {
                     ) : null}
                   </View>
 
-                  <TouchableOpacity
-                    style={[styles.punchBtn, isPunchedToday && styles.punchBtnPunched]}
-                    onPress={() => handleSelectShop(item)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
+                  <View style={styles.shopActionRow}>
+                    <TouchableOpacity
                       style={[
-                        styles.punchBtnText,
-                        isPunchedToday && styles.punchBtnTextPunched,
+                        styles.shopDeleteBtn,
+                        isPunchedToday && styles.shopDeleteBtnPunched,
                       ]}
+                      onPress={() => handleDeleteShop(item)}
+                      activeOpacity={0.7}
                     >
-                      {isPunchedToday ? '⚡ Punch Order Again' : '⚡ Punch Order'}
-                    </Text>
-                  </TouchableOpacity>
+                      <Text
+                        style={[
+                          styles.shopDeleteBtnText,
+                          isPunchedToday && styles.shopDeleteBtnTextPunched,
+                        ]}
+                      >
+                        🗑️ Delete
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.punchBtn, isPunchedToday && styles.punchBtnPunched]}
+                      onPress={() => handleSelectShop(item)}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.punchBtnText,
+                          isPunchedToday && styles.punchBtnTextPunched,
+                        ]}
+                      >
+                        {isPunchedToday ? '⚡ Punch Again' : '⚡ Punch Order'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               );
             }}
@@ -325,6 +382,20 @@ export const RouteSelectScreen: React.FC = () => {
                 <Text style={styles.menuClose}>✕</Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false);
+                setManageRoutesModalVisible(true);
+              }}
+            >
+              <Text style={styles.menuItemIcon}>⚙️</Text>
+              <View>
+                <Text style={styles.menuItemLabel}>Manage Routes</Text>
+                <Text style={styles.menuItemSub}>Add or delete delivery routes</Text>
+              </View>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.menuItem}
@@ -373,7 +444,14 @@ export const RouteSelectScreen: React.FC = () => {
         </TouchableOpacity>
       </Modal>
 
-      {/* Modals for Add Route and Add Shop */}
+      {/* Modals for Route and Shop Management */}
+      <ManageRoutesModal
+        visible={manageRoutesModalVisible}
+        onClose={() => setManageRoutesModalVisible(false)}
+        selectedRouteId={selectedRouteId}
+        onSelectRoute={(id) => setSelectedRouteId(id)}
+      />
+
       <AddRouteModal
         visible={addRouteModalVisible}
         onClose={() => setAddRouteModalVisible(false)}
@@ -443,6 +521,7 @@ const styles = StyleSheet.create({
   routeHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     marginBottom: 8,
   },
@@ -451,6 +530,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#6B7280',
     letterSpacing: 0.5,
+  },
+  routeHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  manageRouteLinkBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 4,
+  },
+  manageRouteLinkText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#1E40AF',
+  },
+  addRouteLinkBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   addRouteLink: {
     fontSize: 12,
@@ -668,12 +767,41 @@ const styles = StyleSheet.create({
   fssaiTagTextPunched: {
     color: '#FEF3C7',
   },
+  shopActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  shopDeleteBtn: {
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  shopDeleteBtnPunched: {
+    backgroundColor: 'rgba(254, 226, 226, 0.2)',
+    borderColor: 'rgba(254, 202, 202, 0.4)',
+  },
+  shopDeleteBtnText: {
+    color: '#DC2626',
+    fontWeight: '700',
+    fontSize: 12.5,
+  },
+  shopDeleteBtnTextPunched: {
+    color: '#FEE2E2',
+  },
   punchBtn: {
+    flex: 1,
     backgroundColor: '#059669',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 12,
+    justifyContent: 'center',
   },
   punchBtnPunched: {
     backgroundColor: '#10B981',
