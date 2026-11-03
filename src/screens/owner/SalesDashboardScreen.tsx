@@ -41,7 +41,7 @@ export const SalesDashboardScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { user, logout } = useAuth();
-  const { routes, orders, markOrderAsPrinted, refreshData } = useStore();
+  const { routes, orders, markOrderAsPrinted, refreshData, clearAllOrders } = useStore();
 
   // Filter & View States
   const [selectedRouteId, setSelectedRouteId] = useState<string>('ALL');
@@ -178,8 +178,15 @@ export const SalesDashboardScreen: React.FC = () => {
         let valB: any = b.created_at;
 
         if (sortColumn === 'orderNo') {
-          valA = a.invoice_no;
-          valB = b.invoice_no;
+          const numA = parseInt(a.invoice_no, 10);
+          const numB = parseInt(b.invoice_no, 10);
+          if (!isNaN(numA) && !isNaN(numB)) {
+            valA = numA;
+            valB = numB;
+          } else {
+            valA = a.invoice_no;
+            valB = b.invoice_no;
+          }
         } else if (sortColumn === 'date' || sortColumn === 'time') {
           valA = new Date(a.created_at).getTime();
           valB = new Date(b.created_at).getTime();
@@ -472,12 +479,12 @@ export const SalesDashboardScreen: React.FC = () => {
                 <Text style={styles.thText}>Sr No. {sortColumn === 'srNo' ? (sortAsc ? '▲' : '▼') : '◆'}</Text>
               </TouchableOpacity>
 
-              {/* Order No */}
+              {/* Invoice No */}
               <TouchableOpacity
                 style={[styles.thCell, styles.colOrderNo]}
                 onPress={() => handleSort('orderNo')}
               >
-                <Text style={styles.thText}>Order No {sortColumn === 'orderNo' ? (sortAsc ? '▲' : '▼') : '◆'}</Text>
+                <Text style={styles.thText}>Invoice No {sortColumn === 'orderNo' ? (sortAsc ? '▲' : '▼') : '◆'}</Text>
               </TouchableOpacity>
 
               {/* Date */}
@@ -568,7 +575,7 @@ export const SalesDashboardScreen: React.FC = () => {
               <View style={[styles.filterCell, styles.colOrderNo]}>
                 <TextInput
                   style={styles.filterInput}
-                  placeholder="Search in Orc"
+                  placeholder="Search in Inv"
                   placeholderTextColor="#9CA3AF"
                   value={columnFilters.orderNo}
                   onChangeText={(txt) => setColumnFilters((p) => ({ ...p, orderNo: txt }))}
@@ -699,10 +706,10 @@ export const SalesDashboardScreen: React.FC = () => {
                       <Text style={styles.tdText}>{index + 1}</Text>
                     </View>
 
-                    {/* Order No */}
+                    {/* Invoice No */}
                     <View style={[styles.tdCell, styles.colOrderNo]}>
                       <Text style={[styles.tdText, styles.orderNoLink]}>
-                        {item.invoice_no.startsWith('SO-') ? item.invoice_no : `SO-${item.invoice_no.padStart(7, '0')}`}
+                        {item.invoice_no}
                       </Text>
                     </View>
 
@@ -831,6 +838,34 @@ export const SalesDashboardScreen: React.FC = () => {
               <View>
                 <Text style={styles.menuItemLabel}>Route Summary Sheet</Text>
                 <Text style={styles.menuItemSub}>Consolidated party bills format</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false);
+                Alert.alert(
+                  'Clear Punched Orders',
+                  'Are you sure you want to delete all punched order history? Routes, shops, and products will remain untouched.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Clear All Orders',
+                      style: 'destructive',
+                      onPress: async () => {
+                        await clearAllOrders();
+                        Alert.alert('Orders Cleared', 'All punched order history has been deleted.');
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.menuItemIcon}>🗑️</Text>
+              <View>
+                <Text style={[styles.menuItemLabel, { color: '#DC2626' }]}>Clear Order History</Text>
+                <Text style={styles.menuItemSub}>Delete all punched records</Text>
               </View>
             </TouchableOpacity>
 

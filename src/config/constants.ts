@@ -36,4 +36,11 @@ export const DEFAULT_USERS = [
     full_name: 'Bharath Kumar',
     role: 'executive' as const,
   },
+  {
+    id: 'a0000000-0000-0000-0000-000000000003',
+    phone: '9538344788',
+    password: 'exec123',
+    full_name: 'Bharath Kumar',
+    role: 'executive' as const,
+  },
 ];

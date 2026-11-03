@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS dodla_categories (
 -- 6. Products Table (Godown Inventory items with rate and 5% GST)
 CREATE TABLE IF NOT EXISTS dodla_products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  category_id UUID REFERENCES dodla_categories(id) ON DELETE RESTRICT NOT NULL,
+  category_id UUID REFERENCES dodla_categories(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
   hsn_code VARCHAR(20) DEFAULT '21069099',
   rate NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (rate >= 0),
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS dodla_orders (
 CREATE TABLE IF NOT EXISTS dodla_order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID REFERENCES dodla_orders(id) ON DELETE CASCADE NOT NULL,
-  product_id UUID REFERENCES dodla_products(id),
+  product_id UUID REFERENCES dodla_products(id) ON DELETE SET NULL,
   product_name TEXT NOT NULL,
   category_name TEXT NOT NULL,
   qty INT NOT NULL DEFAULT 1 CHECK (qty > 0),

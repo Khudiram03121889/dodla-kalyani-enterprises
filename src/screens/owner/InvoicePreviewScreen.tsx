@@ -267,15 +267,6 @@ export const InvoicePreviewScreen: React.FC = () => {
                 ))}
                 <Text style={styles.catBoxHeaderCell}>TOTAL</Text>
               </View>
-              <View style={[styles.catBoxRow, { backgroundColor: '#F9FAFB' }]}>
-                <Text style={[styles.catBoxCell, { fontWeight: 'bold', fontSize: 9.5 }]}>HSN</Text>
-                {Object.keys(categoryQtyMap).map((cat) => (
-                  <Text key={cat} style={[styles.catBoxCell, { fontWeight: 'bold', fontSize: 9, color: '#1E3A8A' }]}>
-                    {getCategoryHsn(cat)}
-                  </Text>
-                ))}
-                <Text style={[styles.catBoxCell, { fontWeight: 'bold' }]}>-</Text>
-              </View>
               <View style={styles.catBoxRow}>
                 <Text style={[styles.catBoxCell, { fontWeight: 'bold' }]}>QTY</Text>
                 {Object.keys(categoryQtyMap).map((cat) => (

@@ -9,6 +9,7 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
 import { Category } from '../../types';
@@ -80,38 +81,50 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
   const handleDelete = (cat: Category) => {
     const linkedProducts = products.filter((p) => p.category_id === cat.id);
-    if (linkedProducts.length > 0) {
-      Alert.alert(
-        'Cannot Delete Category',
-        `"${cat.name}" has ${linkedProducts.length} active product(s) in Godown inventory:\n\n${linkedProducts
-          .map((p) => `• ${p.name}`)
-          .join('\n')}\n\nPlease delete or reassign these products before deleting this category.`
-      );
-      return;
-    }
+    const confirmMessage =
+      linkedProducts.length > 0
+        ? `"${cat.name}" has ${linkedProducts.length} product(s) in Godown inventory (including stock).\n\nDeleting this category will permanently delete all its products and their stock.\n\nAre you sure you want to proceed?`
+        : `Are you sure you want to permanently delete "${cat.name}" from the database?`;
 
-    Alert.alert(
-      'Delete Category',
-      `Are you sure you want to permanently delete "${cat.name}" from the database?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsSubmitting(true);
-              await deleteCategory(cat.id);
-              setIsSubmitting(false);
-              Alert.alert('Deleted', `Category "${cat.name}" was removed successfully.`);
-            } catch (err: any) {
-              setIsSubmitting(false);
-              Alert.alert('Cannot Delete Category', err.message || 'Failed to delete category.');
-            }
+    const executeDelete = async () => {
+      try {
+        setIsSubmitting(true);
+        await deleteCategory(cat.id);
+        setIsSubmitting(false);
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.alert(`Category "${cat.name}" was removed successfully.`);
+        } else {
+          Alert.alert('Deleted', `Category "${cat.name}" was removed successfully.`);
+        }
+      } catch (err: any) {
+        setIsSubmitting(false);
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.alert(err.message || 'Failed to delete category.');
+        } else {
+          Alert.alert('Cannot Delete Category', err.message || 'Failed to delete category.');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm(confirmMessage);
+      if (confirmed) {
+        executeDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Category',
+        confirmMessage,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: executeDelete,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   return (
@@ -335,6 +348,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
     borderRadius: 8,

@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { COMPANY_DETAILS, DEFAULT_USERS } from '../../config/constants';
-import { isSupabaseConfigured } from '../../config/supabase';
 
 export const LoginScreen: React.FC = () => {
   const { login, isLoading: authLoading } = useAuth();
@@ -37,8 +36,10 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleQuickFill = (userType: 'owner' | 'executive') => {
-    const target = DEFAULT_USERS.find((u) => u.role === userType);
+  const handleQuickFill = () => {
+    const target =
+      DEFAULT_USERS.find((u) => u.phone === '9538344788') ||
+      DEFAULT_USERS.find((u) => u.role === 'executive');
     if (target) {
       setPhone(target.phone);
       setPassword(target.password);
@@ -74,8 +75,6 @@ export const LoginScreen: React.FC = () => {
               <Text style={styles.countryCode}>+91</Text>
               <TextInput
                 style={styles.phoneInput}
-                placeholder="Enter 10-digit phone number"
-                placeholderTextColor="#999"
                 keyboardType="phone-pad"
                 maxLength={10}
                 value={phone}
@@ -88,8 +87,6 @@ export const LoginScreen: React.FC = () => {
             <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor="#999"
               secureTextEntry
               value={password}
               onChangeText={setPassword}
@@ -108,13 +105,15 @@ export const LoginScreen: React.FC = () => {
             )}
           </TouchableOpacity>
 
-          {/* Quick Demo Fill Buttons */}
+          {/* Quick Demo Fill Chips */}
           <View style={styles.demoSection}>
-            <Text style={styles.demoTitle}>Quick Demo Sign-In:</Text>
             <View style={styles.demoButtonRow}>
               <TouchableOpacity
                 style={[styles.demoChip, styles.ownerChip]}
-                onPress={() => handleQuickFill('owner')}
+                onPress={() => {
+                  setPhone('9900426623');
+                  setPassword('kalyani1975');
+                }}
               >
                 <Text style={styles.ownerChipText}>👑 Owner Login</Text>
                 <Text style={styles.chipPhone}>9900426623</Text>
@@ -122,28 +121,16 @@ export const LoginScreen: React.FC = () => {
 
               <TouchableOpacity
                 style={[styles.demoChip, styles.execChip]}
-                onPress={() => handleQuickFill('executive')}
+                onPress={() => {
+                  setPhone('9538344788');
+                  setPassword('exec123');
+                }}
               >
                 <Text style={styles.execChipText}>🚚 Executive Login</Text>
                 <Text style={styles.chipPhone}>9538344788</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-
-        {/* Database Status Footer */}
-        <View style={styles.footerStatus}>
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: isSupabaseConfigured() ? '#10B981' : '#F59E0B' },
-            ]}
-          />
-          <Text style={styles.statusText}>
-            {isSupabaseConfigured()
-              ? 'Connected to Supabase Cloud Database'
-              : 'Offline / Local Database Active (Supabase ready)'}
-          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -153,130 +140,130 @@ export const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   brandContainer: {
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  logo: {
-    width: 120,
-    height: 120,
     marginBottom: 12,
   },
+  logo: {
+    width: 60,
+    height: 60,
+    marginBottom: 6,
+  },
   appTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#1E3A8A',
     letterSpacing: 0.5,
   },
   companySubtitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: '#334155',
     marginTop: 2,
   },
   locationSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
+    fontSize: 11,
+    color: '#64748B',
     marginTop: 1,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 14,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     elevation: 4,
+    maxWidth: 420,
+    width: '100%',
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   cardHeader: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
   },
   cardSub: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 4,
-    marginBottom: 20,
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+    marginBottom: 14,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 4,
   },
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
   },
   countryCode: {
-    paddingHorizontal: 12,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#4B5563',
+    paddingHorizontal: 10,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
+    borderRightColor: '#CBD5E1',
   },
   phoneInput: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    fontSize: 15,
-    color: '#111827',
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
   },
   input: {
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    backgroundColor: '#F9FAFB',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: '#0F172A',
   },
   loginBtn: {
     backgroundColor: '#1E3A8A',
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 11,
+    borderRadius: 8,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   btnDisabled: {
     opacity: 0.6,
   },
   loginBtnText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
   demoSection: {
-    marginTop: 24,
-    paddingTop: 18,
+    marginTop: 14,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  demoTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 10,
+    borderTopColor: '#F1F5F9',
   },
   demoButtonRow: {
     flexDirection: 'row',
@@ -284,7 +271,8 @@ const styles = StyleSheet.create({
   },
   demoChip: {
     flex: 1,
-    padding: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
@@ -294,8 +282,8 @@ const styles = StyleSheet.create({
     borderColor: '#BFDBFE',
   },
   ownerChipText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#1D4ED8',
   },
   execChip: {
@@ -303,29 +291,31 @@ const styles = StyleSheet.create({
     borderColor: '#BBF7D0',
   },
   execChipText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#15803D',
   },
   chipPhone: {
-    fontSize: 11,
-    color: '#4B5563',
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#475569',
     marginTop: 2,
   },
   footerStatus: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 14,
     gap: 6,
   },
   statusDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
   },
   statusText: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748B',
   },
 });

@@ -24,7 +24,12 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/kalyani_enterprise_logo.png",
+      "name": "Dodla Sales & Billing - Kalyani Enterprises",
+      "shortName": "Dodla Billing",
+      "themeColor": "#1E3A8A",
+      "backgroundColor": "#FFFFFF",
+      "display": "standalone"
     },
     "plugins": [
       "expo-sharing"

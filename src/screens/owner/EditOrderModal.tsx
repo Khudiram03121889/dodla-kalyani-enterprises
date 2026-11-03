@@ -154,7 +154,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
           {/* Modal Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.headerTitle}>Edit Order &bull; #{order.invoice_no}</Text>
+              <Text style={styles.headerTitle}>Edit Invoice &bull; #{order.invoice_no}</Text>
               <Text style={styles.headerSub}>
                 🏪 {order.shop_name} &bull; 📍 {order.route_name}
               </Text>

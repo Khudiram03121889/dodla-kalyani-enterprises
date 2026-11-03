@@ -37,6 +37,7 @@ interface StoreContextType {
     items: { product: Product; qty: number }[]
   ) => Promise<Order>;
   markOrderAsPrinted: (orderId: string) => Promise<void>;
+  clearAllOrders: () => Promise<void>;
   refreshData: () => Promise<void>;
 }
 
@@ -494,26 +495,59 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteCategory = async (id: string): Promise<void> => {
-    // 1. Check if any products use this category
-    const linkedProducts = products.filter((p) => p.category_id === id);
-    if (linkedProducts.length > 0) {
-      const names = linkedProducts.map((p) => `"${p.name}"`).join(', ');
-      throw new Error(`Cannot delete category because ${linkedProducts.length} product(s) belong to it: ${names}. Delete or reassign the products first.`);
-    }
-
-    // 2. Perform Supabase deletion
+    // 1. Perform Supabase deletion
     if (isSupabaseConfigured() && supabase) {
-      const { error } = await supabase.from('dodla_categories').delete().eq('id', id);
-      if (error) {
-        console.error('Supabase category delete error:', error);
-        throw new Error(error.message || 'Failed to delete category in database');
+      // Find all products in Supabase under this category
+      const { data: dbProducts } = await supabase
+        .from('dodla_products')
+        .select('id')
+        .eq('category_id', id);
+
+      const allProductIds = Array.from(
+        new Set([
+          ...products.filter((p) => p.category_id === id).map((p) => p.id),
+          ...(dbProducts || []).map((p: any) => p.id),
+        ])
+      );
+
+      // If category has products, unlink them from order items and delete them
+      if (allProductIds.length > 0) {
+        const { error: unlinkError } = await supabase
+          .from('dodla_order_items')
+          .update({ product_id: null })
+          .in('product_id', allProductIds);
+        if (unlinkError) {
+          console.error('Supabase unlink category products order items error:', unlinkError);
+        }
+
+        const { error: prodDeleteError } = await supabase
+          .from('dodla_products')
+          .delete()
+          .eq('category_id', id);
+        if (prodDeleteError) {
+          console.error('Supabase category products delete error:', prodDeleteError);
+          throw new Error(prodDeleteError.message || 'Failed to delete products under category');
+        }
+      }
+
+      // Delete the category itself
+      const { error: catDeleteError } = await supabase
+        .from('dodla_categories')
+        .delete()
+        .eq('id', id);
+      if (catDeleteError) {
+        console.error('Supabase category delete error:', catDeleteError);
+        throw new Error(catDeleteError.message || 'Failed to delete category in database');
       }
     }
 
-    // 3. Update local state
-    const updated = categories.filter((c) => c.id !== id);
-    setCategories(updated);
-    await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated));
+    // 2. Update local state
+    const updatedCategories = categories.filter((c) => c.id !== id);
+    const updatedProducts = products.filter((p) => p.category_id !== id);
+    setCategories(updatedCategories);
+    setProducts(updatedProducts);
+    await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updatedCategories));
+    await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
   };
 
   const addProduct = async (productData: Omit<Product, 'id' | 'created_at'>): Promise<Product> => {
@@ -574,6 +608,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteProduct = async (id: string): Promise<void> => {
     if (isSupabaseConfigured() && supabase) {
+      // 1. Unlink product from order items so foreign key constraint does not fail.
+      // Order items retain product_name, category_name, qty, rate, tax, amounts for invoice records.
+      const { error: unlinkError } = await supabase
+        .from('dodla_order_items')
+        .update({ product_id: null })
+        .eq('product_id', id);
+      if (unlinkError) {
+        console.error('Supabase unlink product order items error:', unlinkError);
+      }
+
+      // 2. Delete product from database
       const { error } = await supabase.from('dodla_products').delete().eq('id', id);
       if (error) {
         console.error('Supabase product delete error:', error);
@@ -889,6 +934,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const clearAllOrders = async (): Promise<void> => {
+    try {
+      setOrders([]);
+      await AsyncStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify([]));
+
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          await supabase
+            .from('dodla_order_items')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+          await supabase
+            .from('dodla_orders')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+        } catch (supaErr) {
+          console.warn('Supabase clear orders error:', supaErr);
+        }
+      }
+    } catch (err) {
+      console.warn('Error clearing orders:', err);
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -912,6 +981,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         punchOrder,
         updateOrder,
         markOrderAsPrinted,
+        clearAllOrders,
         refreshData: loadAllData,
       }}
     >

@@ -62,18 +62,44 @@ export const InventoryScreen: React.FC = () => {
   };
 
   const handleDeleteProduct = (p: Product) => {
-    Alert.alert(
-      'Delete Product',
-      `Are you sure you want to remove "${p.name}" from Godown inventory?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteProduct(p.id),
-        },
-      ]
-    );
+    const confirmMessage = `Are you sure you want to permanently delete "${p.name}" (Current Stock: ${p.stock_qty}) from Godown inventory?`;
+
+    const executeDelete = async () => {
+      try {
+        await deleteProduct(p.id);
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.alert(`Product "${p.name}" was removed successfully.`);
+        } else {
+          Alert.alert('Deleted', `Product "${p.name}" was removed successfully.`);
+        }
+      } catch (err: any) {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.alert(err.message || 'Failed to delete product.');
+        } else {
+          Alert.alert('Cannot Delete Product', err.message || 'Failed to delete product.');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm(confirmMessage);
+      if (confirmed) {
+        executeDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Product',
+        confirmMessage,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: executeDelete,
+          },
+        ]
+      );
+    }
   };
 
   return (

@@ -56,11 +56,6 @@ function generateInvoiceBoxContent(order: Order): string {
           <th style="width: 50px;">TOTAL</th>
         </tr>
         <tr>
-          <td style="font-weight: bold; background: #fafafa; font-size: 8px;">HSN</td>
-          ${categoryHeaders.map((cat) => `<td style="font-weight: bold; font-size: 8px;">${getCategoryHsn(cat)}</td>`).join('')}
-          <td style="font-weight: bold; font-size: 8px;">-</td>
-        </tr>
-        <tr>
           <td style="font-weight: bold;">QTY</td>
           ${categoryHeaders.map((cat) => `<td style="font-weight: bold;">${categoryQtyMap[cat]}</td>`).join('')}
           <td><strong>${order.total_qty}</strong></td>
@@ -212,7 +207,7 @@ export function generateInvoiceHtml(order: Order): string {
   <title>Tax Invoice - ${escapeHtml(order.invoice_no)}</title>
   <style>
     @page {
-      size: A5 portrait;
+      size: 148mm 210mm;
       margin: 3mm;
     }
     html, body {
@@ -420,7 +415,7 @@ export function generateCombinedInvoicesWithSummaryHtml(
   <title>Invoices &amp; Route Summary - ${escapeHtml(effectiveRouteName)}</title>
   <style>
     @page {
-      size: A5 portrait;
+      size: 148mm 210mm;
       margin: 3mm;
     }
     html, body {
@@ -441,10 +436,14 @@ export function generateCombinedInvoicesWithSummaryHtml(
     .invoice-page {
       page-break-after: always;
       break-after: page;
-      margin-bottom: 20px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin: 0;
+      padding: 0;
     }
     .summary-page {
       page-break-inside: avoid;
+      break-inside: avoid;
       padding: 4px;
     }
     .invoice-box {
@@ -687,8 +686,8 @@ export function generateRouteSummaryHtml(route: Route, orders: Order[]): string 
   <title>Route Summary - ${escapeHtml(route.name)}</title>
   <style>
     @page {
-      size: A5 portrait;
-      margin: 5mm;
+      size: 148mm 210mm;
+      margin: 4mm;
     }
     body {
       font-family: Arial, Helvetica, sans-serif;
