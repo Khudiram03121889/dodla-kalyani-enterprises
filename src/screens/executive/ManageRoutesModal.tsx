@@ -11,13 +11,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
-import { Route } from '../../types';
+import { Route, CompanyDivision } from '../../types';
 
 interface ManageRoutesModalProps {
   visible: boolean;
   onClose: () => void;
   selectedRouteId: string;
   onSelectRoute: (id: string) => void;
+  targetCompany?: CompanyDivision;
 }
 
 export const ManageRoutesModal: React.FC<ManageRoutesModalProps> = ({
@@ -25,10 +26,16 @@ export const ManageRoutesModal: React.FC<ManageRoutesModalProps> = ({
   onClose,
   selectedRouteId,
   onSelectRoute,
+  targetCompany,
 }) => {
   const { routes, shops, addRoute, deleteRoute } = useStore();
   const [newRouteName, setNewRouteName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const visibleRoutes = React.useMemo(() => {
+    if (!targetCompany) return routes;
+    return routes.filter((r) => (r.company || 'Dodla') === targetCompany);
+  }, [routes, targetCompany]);
 
   const handleAdd = async () => {
     const trimmed = newRouteName.trim();
@@ -39,7 +46,7 @@ export const ManageRoutesModal: React.FC<ManageRoutesModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      const created = await addRoute(trimmed);
+      const created = await addRoute(trimmed, targetCompany || 'Dodla');
       setNewRouteName('');
       setIsSubmitting(false);
       onSelectRoute(created.id);
@@ -131,7 +138,7 @@ export const ManageRoutesModal: React.FC<ManageRoutesModalProps> = ({
           {/* Routes List */}
           <Text style={styles.listHeader}>Available Routes:</Text>
           <FlatList
-            data={routes}
+            data={visibleRoutes}
             keyExtractor={(item) => item.id}
             style={styles.routeList}
             showsVerticalScrollIndicator={false}

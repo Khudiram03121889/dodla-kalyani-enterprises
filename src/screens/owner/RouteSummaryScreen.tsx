@@ -20,13 +20,31 @@ export const RouteSummaryScreen: React.FC = () => {
   const navigation = useNavigation();
   const { routes, orders } = useStore();
 
+  const [selectedCompany, setSelectedCompany] = useState<'ALL' | 'Dodla' | 'Gopal Chips'>('ALL');
+
+  const displayRoutes = React.useMemo(() => {
+    if (selectedCompany === 'ALL') return routes;
+    return routes.filter((r) => (r.company || 'Dodla') === selectedCompany);
+  }, [routes, selectedCompany]);
+
   const [selectedRouteId, setSelectedRouteId] = useState<string>(
-    routes.length > 0 ? routes[0].id : ''
+    displayRoutes.length > 0 ? displayRoutes[0].id : ''
   );
+
+  React.useEffect(() => {
+    if ((!selectedRouteId || !displayRoutes.some((r) => r.id === selectedRouteId)) && displayRoutes.length > 0) {
+      setSelectedRouteId(displayRoutes[0].id);
+    }
+  }, [displayRoutes, selectedRouteId]);
+
   const [isPrinting, setIsPrinting] = useState(false);
 
-  const activeRoute = routes.find((r) => r.id === selectedRouteId) || routes[0];
-  const routeOrders = orders.filter((o) => o.route_id === selectedRouteId);
+  const activeRoute = displayRoutes.find((r) => r.id === selectedRouteId) || displayRoutes[0];
+  const routeOrders = orders.filter((o) => {
+    if (o.route_id !== selectedRouteId) return false;
+    if (selectedCompany !== 'ALL' && (o.company || 'Dodla') !== selectedCompany) return false;
+    return true;
+  });
   const totalAmount = routeOrders.reduce((sum, o) => sum + o.grand_total, 0);
 
   const handlePrint = async () => {
@@ -61,13 +79,71 @@ export const RouteSummaryScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* Company Division Tabs */}
+      <View style={styles.companyDivisionBar}>
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'ALL' && styles.companyTabBtnActive,
+          ]}
+          onPress={() => setSelectedCompany('ALL')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'ALL' && styles.companyTabBtnTextActive,
+            ]}
+          >
+            All Divisions
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'Dodla' && styles.companyTabBtnActiveDodla,
+          ]}
+          onPress={() => setSelectedCompany('Dodla')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'Dodla' && styles.companyTabBtnTextActiveDodla,
+            ]}
+          >
+            🔵 Dodla
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'Gopal Chips' && styles.companyTabBtnActiveGopal,
+          ]}
+          onPress={() => setSelectedCompany('Gopal Chips')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'Gopal Chips' && styles.companyTabBtnTextActiveGopal,
+            ]}
+          >
+            🟠 Gopal Chips
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Route Selector Pills */}
       <View style={styles.routeSelector}>
         <Text style={styles.routeSelectLabel}>SELECT ROUTE:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.routeScroll}>
-          {routes.map((r) => {
+          {displayRoutes.map((r) => {
             const isSelected = r.id === selectedRouteId;
-            const count = orders.filter((o) => o.route_id === r.id).length;
+            const count = orders.filter((o) => {
+              if (o.route_id !== r.id) return false;
+              if (selectedCompany !== 'ALL' && (o.company || 'Dodla') !== selectedCompany) return false;
+              return true;
+            }).length;
             return (
               <TouchableOpacity
                 key={r.id}
@@ -184,6 +260,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E3A8A',
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  companyDivisionBar: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 8,
+  },
+  companyTabBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  companyTabBtnActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  companyTabBtnActiveDodla: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
+  },
+  companyTabBtnActiveGopal: {
+    backgroundColor: '#C2410C',
+    borderColor: '#C2410C',
+  },
+  companyTabBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  companyTabBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  companyTabBtnTextActiveDodla: {
+    color: '#FFFFFF',
+  },
+  companyTabBtnTextActiveGopal: {
+    color: '#FFFFFF',
   },
   backBtn: {
     paddingHorizontal: 8,

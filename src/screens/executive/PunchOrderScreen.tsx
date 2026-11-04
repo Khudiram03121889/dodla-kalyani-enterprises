@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
-import { Shop, Product, Order } from '../../types';
+import { Shop, Product, Order, CompanyDivision } from '../../types';
 import { calculateOrderTax } from '../../utils/taxCalculator';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -31,6 +31,9 @@ export const PunchOrderScreen: React.FC = () => {
     routeName: string;
   };
 
+  const executiveCompany: CompanyDivision = (user?.company as CompanyDivision) || 'Dodla';
+  const themeColor = executiveCompany === 'Gopal Chips' ? '#C2410C' : '#1E3A8A';
+
   // State: selected category filter (or 'ALL')
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,16 +42,22 @@ export const PunchOrderScreen: React.FC = () => {
   const [isPunching, setIsPunching] = useState(false);
   const [successOrder, setSuccessOrder] = useState<Order | null>(null);
 
-  // Filter products by category and search
+  // Scoped categories for this executive's company
+  const executiveCategories = useMemo(() => {
+    return categories.filter((c) => (c.company || 'Dodla') === executiveCompany);
+  }, [categories, executiveCompany]);
+
+  // Filter products by company, category and search
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
+      if ((p.company || 'Dodla') !== executiveCompany) return false;
       const matchCat = selectedCategory === 'ALL' || p.category_id === selectedCategory;
       if (!matchCat) return false;
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return p.name.toLowerCase().includes(q) || (p.hsn_code && p.hsn_code.includes(q));
     });
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery, executiveCompany]);
 
   // Live order calculations
   const orderSummary = useMemo(() => {
@@ -115,12 +124,13 @@ export const PunchOrderScreen: React.FC = () => {
     try {
       setIsPunching(true);
       const createdOrder = await punchOrder({
+        company: executiveCompany,
         routeId,
         routeName,
         shop,
-        executiveId: user?.id || 'exec_default',
-        executiveName: user?.full_name || 'Bharath Kumar',
-        executivePhone: user?.phone || '9538344788',
+        executiveId: user?.id || (executiveCompany === 'Gopal Chips' ? 'exec-gopal-01' : 'exec-dodla-01'),
+        executiveName: user?.full_name || (executiveCompany === 'Gopal Chips' ? 'Yerriswamy' : 'Shekshavali'),
+        executivePhone: user?.phone || (executiveCompany === 'Gopal Chips' ? '9535959564' : '9538344788'),
         items: itemsToPunch,
       });
 
@@ -138,16 +148,30 @@ export const PunchOrderScreen: React.FC = () => {
       <View
         style={[
           styles.header,
-          { paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: 12 },
+          { backgroundColor: themeColor, paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: 12 },
         ]}
       >
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.shopTitle} numberOfLines={1}>
-            {shop.name}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.shopTitle} numberOfLines={1}>
+              {shop.name}
+            </Text>
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 4,
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
+                {executiveCompany}
+              </Text>
+            </View>
+          </View>
           <Text style={styles.shopSub}>
             📍 {routeName} &bull; 📞 {shop.phone}
           </Text>
@@ -159,14 +183,20 @@ export const PunchOrderScreen: React.FC = () => {
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={[{ id: 'ALL', name: 'All Items' }, ...categories]}
+          data={[{ id: 'ALL', name: 'All Items' }, ...executiveCategories]}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.categoryList}
           renderItem={({ item }) => {
             const isSelected = selectedCategory === item.id;
             return (
               <TouchableOpacity
-                style={[styles.categoryPill, isSelected && styles.categoryPillActive]}
+                style={[
+                  styles.categoryPill,
+                  isSelected && {
+                    backgroundColor: themeColor,
+                    borderColor: themeColor,
+                  },
+                ]}
                 onPress={() => setSelectedCategory(item.id)}
               >
                 <Text
@@ -355,7 +385,11 @@ export const PunchOrderScreen: React.FC = () => {
         </View>
 
         <TouchableOpacity
-          style={[styles.punchOrderBtn, (orderSummary.totalQty === 0 || isPunching) && styles.punchBtnDisabled]}
+          style={[
+            styles.punchOrderBtn,
+            { backgroundColor: themeColor },
+            (orderSummary.totalQty === 0 || isPunching) && styles.punchBtnDisabled,
+          ]}
           onPress={handlePunch}
           disabled={orderSummary.totalQty === 0 || isPunching}
           activeOpacity={0.85}
@@ -385,6 +419,12 @@ export const PunchOrderScreen: React.FC = () => {
                   <Text style={[styles.detailVal, { fontWeight: '800' }]}>{successOrder.invoice_no}</Text>
                 </View>
                 <View style={styles.detailRow}>
+                  <Text style={styles.detailKey}>Division:</Text>
+                  <Text style={[styles.detailVal, { fontWeight: '800', color: themeColor }]}>
+                    {successOrder.company || executiveCompany}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
                   <Text style={styles.detailKey}>Shop:</Text>
                   <Text style={styles.detailVal}>{successOrder.shop_name}</Text>
                 </View>
@@ -394,7 +434,7 @@ export const PunchOrderScreen: React.FC = () => {
                 </View>
                 <View style={[styles.detailRow, { borderTopWidth: 1, borderColor: '#E5E7EB', paddingTop: 8, marginTop: 4 }]}>
                   <Text style={[styles.detailKey, { fontWeight: '700' }]}>Grand Total:</Text>
-                  <Text style={[styles.detailVal, { fontSize: 16, fontWeight: '800', color: '#1E3A8A' }]}>
+                  <Text style={[styles.detailVal, { fontSize: 16, fontWeight: '800', color: themeColor }]}>
                     ₹{successOrder.grand_total.toLocaleString('en-IN')}
                   </Text>
                 </View>

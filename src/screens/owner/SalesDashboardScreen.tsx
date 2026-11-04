@@ -44,6 +44,7 @@ export const SalesDashboardScreen: React.FC = () => {
   const { routes, orders, markOrderAsPrinted, refreshData, clearAllOrders } = useStore();
 
   // Filter & View States
+  const [selectedCompany, setSelectedCompany] = useState<'ALL' | 'Dodla' | 'Gopal Chips'>('ALL');
   const [selectedRouteId, setSelectedRouteId] = useState<string>('ALL');
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'printed'>('all');
   const [menuVisible, setMenuVisible] = useState(false);
@@ -100,10 +101,14 @@ export const SalesDashboardScreen: React.FC = () => {
     }
   };
 
-  // Filter Orders by Route, Tab Status, and Column Searches
+  // Filter Orders by Company, Route, Tab Status, and Column Searches
   const filteredOrders = useMemo(() => {
     return orders
       .filter((o) => {
+        // 0. Company Division Filter
+        if (selectedCompany !== 'ALL' && (o.company || 'Dodla') !== selectedCompany) {
+          return false;
+        }
         // 1. Route Filter
         if (selectedRouteId !== 'ALL' && o.route_id !== selectedRouteId) {
           return false;
@@ -214,7 +219,17 @@ export const SalesDashboardScreen: React.FC = () => {
         if (valA > valB) return sortAsc ? 1 : -1;
         return 0;
       });
-  }, [orders, selectedRouteId, activeTab, columnFilters, sortColumn, sortAsc]);
+  }, [orders, selectedCompany, selectedRouteId, activeTab, columnFilters, sortColumn, sortAsc]);
+
+  const companyScopedOrders = useMemo(() => {
+    if (selectedCompany === 'ALL') return orders;
+    return orders.filter((o) => (o.company || 'Dodla') === selectedCompany);
+  }, [orders, selectedCompany]);
+
+  const displayRoutes = useMemo(() => {
+    if (selectedCompany === 'ALL') return routes;
+    return routes.filter((r) => (r.company || 'Dodla') === selectedCompany);
+  }, [routes, selectedCompany]);
 
   // Totals calculations
   const totalItemsSum = filteredOrders.reduce((sum, o) => sum + o.total_qty, 0);
@@ -319,6 +334,60 @@ export const SalesDashboardScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Top Company Division Filter Tabs */}
+      <View style={styles.companyDivisionBar}>
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'ALL' && styles.companyTabBtnActive,
+          ]}
+          onPress={() => setSelectedCompany('ALL')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'ALL' && styles.companyTabBtnTextActive,
+            ]}
+          >
+            All Bills ({orders.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'Dodla' && styles.companyTabBtnActiveDodla,
+          ]}
+          onPress={() => setSelectedCompany('Dodla')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'Dodla' && styles.companyTabBtnTextActiveDodla,
+            ]}
+          >
+            🔵 Dodla Bills ({orders.filter((o) => (o.company || 'Dodla') === 'Dodla').length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'Gopal Chips' && styles.companyTabBtnActiveGopal,
+          ]}
+          onPress={() => setSelectedCompany('Gopal Chips')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'Gopal Chips' && styles.companyTabBtnTextActiveGopal,
+            ]}
+          >
+            🟠 Gopal Chips Bills ({orders.filter((o) => o.company === 'Gopal Chips').length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Route Selector Horizontal Pills */}
       <View style={styles.routeSelectorBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.routePillsScroll}>
@@ -335,13 +404,13 @@ export const SalesDashboardScreen: React.FC = () => {
                 selectedRouteId === 'ALL' && styles.routePillTextActive,
               ]}
             >
-              ALL ROUTES ({orders.length})
+              ALL ROUTES ({companyScopedOrders.length})
             </Text>
           </TouchableOpacity>
 
-          {routes.map((r) => {
+          {displayRoutes.map((r) => {
             const isSelected = r.id === selectedRouteId;
-            const routeCount = orders.filter((o) => o.route_id === r.id).length;
+            const routeCount = companyScopedOrders.filter((o) => o.route_id === r.id).length;
             return (
               <TouchableOpacity
                 key={r.id}
@@ -370,7 +439,7 @@ export const SalesDashboardScreen: React.FC = () => {
             onPress={() => setActiveTab('all')}
           >
             <Text style={[styles.tabBtnText, activeTab === 'all' && styles.tabBtnTextActive]}>
-              All ({orders.length})
+              All ({companyScopedOrders.length})
             </Text>
           </TouchableOpacity>
 
@@ -379,7 +448,7 @@ export const SalesDashboardScreen: React.FC = () => {
             onPress={() => setActiveTab('pending')}
           >
             <Text style={[styles.tabBtnText, activeTab === 'pending' && styles.tabBtnTextActive]}>
-              Pending ({orders.filter((o) => o.status === 'pending').length})
+              Pending ({companyScopedOrders.filter((o) => o.status === 'pending').length})
             </Text>
           </TouchableOpacity>
 
@@ -388,7 +457,7 @@ export const SalesDashboardScreen: React.FC = () => {
             onPress={() => setActiveTab('printed')}
           >
             <Text style={[styles.tabBtnText, activeTab === 'printed' && styles.tabBtnTextActive]}>
-              Printed ({orders.filter((o) => o.status === 'printed').length})
+              Printed ({companyScopedOrders.filter((o) => o.status === 'printed').length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -478,6 +547,11 @@ export const SalesDashboardScreen: React.FC = () => {
               >
                 <Text style={styles.thText}>Sr No. {sortColumn === 'srNo' ? (sortAsc ? '▲' : '▼') : '◆'}</Text>
               </TouchableOpacity>
+
+              {/* Division */}
+              <View style={[styles.thCell, styles.colDiv]}>
+                <Text style={styles.thText}>Division</Text>
+              </View>
 
               {/* Invoice No */}
               <TouchableOpacity
@@ -571,6 +645,8 @@ export const SalesDashboardScreen: React.FC = () => {
                   onChangeText={(txt) => setColumnFilters((p) => ({ ...p, srNo: txt }))}
                 />
               </View>
+
+              <View style={[styles.filterCell, styles.colDiv]} />
 
               <View style={[styles.filterCell, styles.colOrderNo]}>
                 <TextInput
@@ -704,6 +780,29 @@ export const SalesDashboardScreen: React.FC = () => {
                     {/* Sr No. */}
                     <View style={[styles.tdCell, styles.colSr]}>
                       <Text style={styles.tdText}>{index + 1}</Text>
+                    </View>
+
+                    {/* Division */}
+                    <View style={[styles.tdCell, styles.colDiv]}>
+                      <View
+                        style={[
+                          styles.companyBadge,
+                          item.company === 'Gopal Chips'
+                            ? styles.companyBadgeGopal
+                            : styles.companyBadgeDodla,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.companyBadgeText,
+                            item.company === 'Gopal Chips'
+                              ? styles.companyBadgeTextGopal
+                              : styles.companyBadgeTextDodla,
+                          ]}
+                        >
+                          {item.company === 'Gopal Chips' ? 'Gopal' : 'Dodla'}
+                        </Text>
+                      </View>
                     </View>
 
                     {/* Invoice No */}
@@ -1170,6 +1269,7 @@ const styles = StyleSheet.create({
   colCheck: { width: 34, alignItems: 'center' },
   colEdit: { width: 38, alignItems: 'center' },
   colSr: { width: 50 },
+  colDiv: { width: 75, alignItems: 'center', justifyContent: 'center' },
   colOrderNo: { width: 95 },
   colDate: { width: 135 },
   colTime: { width: 135 },
@@ -1180,6 +1280,70 @@ const styles = StyleSheet.create({
   colItems: { width: 50 },
   colAmount: { width: 75 },
   colBill: { width: 60, alignItems: 'center' },
+  companyDivisionBar: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 8,
+  },
+  companyTabBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  companyTabBtnActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  companyTabBtnActiveDodla: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
+  },
+  companyTabBtnActiveGopal: {
+    backgroundColor: '#C2410C',
+    borderColor: '#C2410C',
+  },
+  companyTabBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  companyTabBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  companyTabBtnTextActiveDodla: {
+    color: '#FFFFFF',
+  },
+  companyTabBtnTextActiveGopal: {
+    color: '#FFFFFF',
+  },
+  companyBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  companyBadgeDodla: {
+    backgroundColor: '#DBEAFE',
+  },
+  companyBadgeGopal: {
+    backgroundColor: '#FFEDD5',
+  },
+  companyBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  companyBadgeTextDodla: {
+    color: '#1E40AF',
+  },
+  companyBadgeTextGopal: {
+    color: '#9A3412',
+  },
   tableFooterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

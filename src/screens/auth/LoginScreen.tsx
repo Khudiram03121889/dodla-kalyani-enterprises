@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { COMPANY_DETAILS, DEFAULT_USERS } from '../../config/constants';
+import { COMPANY_DETAILS } from '../../config/constants';
 
 export const LoginScreen: React.FC = () => {
   const { login, isLoading: authLoading } = useAuth();
@@ -36,16 +36,6 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleQuickFill = () => {
-    const target =
-      DEFAULT_USERS.find((u) => u.phone === '9538344788') ||
-      DEFAULT_USERS.find((u) => u.role === 'executive');
-    if (target) {
-      setPhone(target.phone);
-      setPassword(target.password);
-    }
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -59,15 +49,15 @@ export const LoginScreen: React.FC = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.appTitle}>Dodla Sales & Billing</Text>
-          <Text style={styles.companySubtitle}>{COMPANY_DETAILS.name}</Text>
+          <Text style={styles.appTitle}>Kalyani Enterprises</Text>
+          <Text style={styles.companySubtitle}>Sales & Distribution Billing System</Text>
           <Text style={styles.locationSubtitle}>Ballari, Karnataka</Text>
         </View>
 
         {/* Login Form */}
         <View style={styles.card}>
           <Text style={styles.cardHeader}>Account Login</Text>
-          <Text style={styles.cardSub}>Sign in using your mobile number and password</Text>
+          <Text style={styles.cardSub}>Sign in using your 10-digit mobile number and password</Text>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Phone Number</Text>
@@ -77,6 +67,8 @@ export const LoginScreen: React.FC = () => {
                 style={styles.phoneInput}
                 keyboardType="phone-pad"
                 maxLength={10}
+                placeholder="Enter 10-digit number"
+                placeholderTextColor="#94A3B8"
                 value={phone}
                 onChangeText={setPhone}
               />
@@ -88,6 +80,8 @@ export const LoginScreen: React.FC = () => {
             <TextInput
               style={styles.input}
               secureTextEntry
+              placeholder="Enter password"
+              placeholderTextColor="#94A3B8"
               value={password}
               onChangeText={setPassword}
             />
@@ -104,33 +98,6 @@ export const LoginScreen: React.FC = () => {
               <Text style={styles.loginBtnText}>Sign In</Text>
             )}
           </TouchableOpacity>
-
-          {/* Quick Demo Fill Chips */}
-          <View style={styles.demoSection}>
-            <View style={styles.demoButtonRow}>
-              <TouchableOpacity
-                style={[styles.demoChip, styles.ownerChip]}
-                onPress={() => {
-                  setPhone('9900426623');
-                  setPassword('kalyani1975');
-                }}
-              >
-                <Text style={styles.ownerChipText}>👑 Owner Login</Text>
-                <Text style={styles.chipPhone}>9900426623</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.demoChip, styles.execChip]}
-                onPress={() => {
-                  setPhone('9538344788');
-                  setPassword('exec123');
-                }}
-              >
-                <Text style={styles.execChipText}>🚚 Executive Login</Text>
-                <Text style={styles.chipPhone}>9538344788</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

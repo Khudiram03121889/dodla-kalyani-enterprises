@@ -10,17 +10,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
+import { CompanyDivision } from '../../types';
 
 interface AddRouteModalProps {
   visible: boolean;
   onClose: () => void;
   onRouteAdded?: (routeId: string) => void;
+  targetCompany?: CompanyDivision;
 }
 
 export const AddRouteModal: React.FC<AddRouteModalProps> = ({
   visible,
   onClose,
   onRouteAdded,
+  targetCompany,
 }) => {
   const { addRoute } = useStore();
   const [routeName, setRouteName] = useState('');
@@ -34,7 +37,7 @@ export const AddRouteModal: React.FC<AddRouteModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      const newRoute = await addRoute(routeName);
+      const newRoute = await addRoute(routeName, targetCompany || 'Dodla');
       setRouteName('');
       setIsSubmitting(false);
       onClose();
@@ -42,9 +45,9 @@ export const AddRouteModal: React.FC<AddRouteModalProps> = ({
         onRouteAdded(newRoute.id);
       }
       Alert.alert('Success', `Route "${newRoute.name}" created successfully!`);
-    } catch (err) {
+    } catch (err: any) {
       setIsSubmitting(false);
-      Alert.alert('Error', 'Failed to add route. Please try again.');
+      Alert.alert('Error', err.message || 'Failed to add route. Please try again.');
     }
   };
 

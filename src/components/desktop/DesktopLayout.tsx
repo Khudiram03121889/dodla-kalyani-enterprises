@@ -30,7 +30,9 @@ export const DesktopLayout: React.FC = () => {
         setActiveTab('sales');
       }
     } else {
-      setActiveTab('punchorder');
+      if (activeTab !== 'punchorder' && activeTab !== 'inventory') {
+        setActiveTab('punchorder');
+      }
     }
   }, [role]);
 
@@ -58,7 +60,7 @@ export const DesktopLayout: React.FC = () => {
               <Text style={styles.brandTitle}>{COMPANY_DETAILS.name}</Text>
               <View style={styles.distributorBadge}>
                 <Text style={styles.distributorBadgeText}>
-                  {role === 'owner' ? 'Dodla Dairy Distributor' : 'Field Executive Workstation'}
+                  {role === 'owner' ? 'Authorized Distributor' : `${user?.company || 'Field'} Executive Workstation`}
                 </Text>
               </View>
             </View>
@@ -151,20 +153,37 @@ export const DesktopLayout: React.FC = () => {
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity
-              style={[styles.navTab, activeTab === 'punchorder' && styles.navTabActive]}
-              onPress={() => setActiveTab('punchorder')}
-            >
-              <Text style={styles.navTabIcon}>🚚</Text>
-              <Text
-                style={[
-                  styles.navTabText,
-                  activeTab === 'punchorder' && styles.navTabTextActive,
-                ]}
+            <>
+              <TouchableOpacity
+                style={[styles.navTab, activeTab === 'punchorder' && styles.navTabActive]}
+                onPress={() => setActiveTab('punchorder')}
               >
-                Punch Order Station (Executive)
-              </Text>
-            </TouchableOpacity>
+                <Text style={styles.navTabIcon}>🚚</Text>
+                <Text
+                  style={[
+                    styles.navTabText,
+                    activeTab === 'punchorder' && styles.navTabTextActive,
+                  ]}
+                >
+                  Punch Order Station ({user?.company || 'Executive'})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.navTab, activeTab === 'inventory' && styles.navTabActive]}
+                onPress={() => setActiveTab('inventory')}
+              >
+                <Text style={styles.navTabIcon}>📦</Text>
+                <Text
+                  style={[
+                    styles.navTabText,
+                    activeTab === 'inventory' && styles.navTabTextActive,
+                  ]}
+                >
+                  My Godown Inventory & Categories
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       </View>
@@ -178,7 +197,10 @@ export const DesktopLayout: React.FC = () => {
             {activeTab === 'routesummary' && <DesktopRouteSummaryScreen />}
           </>
         ) : (
-          <DesktopPunchOrderScreen />
+          <>
+            {activeTab === 'punchorder' && <DesktopPunchOrderScreen />}
+            {activeTab === 'inventory' && <DesktopInventoryScreen />}
+          </>
         )}
       </ScrollView>
     </View>

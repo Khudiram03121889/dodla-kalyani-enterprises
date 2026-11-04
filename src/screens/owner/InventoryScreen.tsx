@@ -13,19 +13,34 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../../context/StoreContext';
-import { Product } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import { Product, CompanyDivision } from '../../types';
 import { CategoryManagerModal } from './CategoryManagerModal';
 import { AddProductModal } from './AddProductModal';
 
 export const InventoryScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { user, role } = useAuth();
   const { categories, products, updateStock, deleteProduct, refreshData } = useStore();
 
+  const isExecutive = role === 'executive';
+  const executiveCompany: CompanyDivision = (user?.company as CompanyDivision) || 'Dodla';
+
+  const [selectedCompany, setSelectedCompany] = useState<'ALL' | CompanyDivision>(
+    isExecutive ? executiveCompany : 'ALL'
+  );
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [addProductModalVisible, setAddProductModalVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Sync executive company when user loads
+  React.useEffect(() => {
+    if (isExecutive) {
+      setSelectedCompany(executiveCompany);
+    }
+  }, [isExecutive, executiveCompany]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -33,19 +48,34 @@ export const InventoryScreen: React.FC = () => {
     setIsRefreshing(false);
   };
 
+  // Filter categories by company
+  const visibleCategories = useMemo(() => {
+    if (isExecutive) {
+      return categories.filter((c) => (c.company || 'Dodla') === executiveCompany);
+    }
+    if (selectedCompany !== 'ALL') {
+      return categories.filter((c) => (c.company || 'Dodla') === selectedCompany);
+    }
+    return categories;
+  }, [categories, isExecutive, executiveCompany, selectedCompany]);
+
   // Quick Restock state
   const [restockProduct, setRestockProduct] = useState<Product | null>(null);
   const [restockQty, setRestockQty] = useState('');
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
+      const pCompany = p.company || 'Dodla';
+      if (isExecutive && pCompany !== executiveCompany) return false;
+      if (!isExecutive && selectedCompany !== 'ALL' && pCompany !== selectedCompany) return false;
+
       const matchCat = selectedCategoryId === 'ALL' || p.category_id === selectedCategoryId;
       if (!matchCat) return false;
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return p.name.toLowerCase().includes(q) || (p.hsn_code && p.hsn_code.includes(q));
     });
-  }, [products, selectedCategoryId, searchQuery]);
+  }, [products, isExecutive, executiveCompany, selectedCompany, selectedCategoryId, searchQuery]);
 
   const handleApplyRestock = async () => {
     if (!restockProduct) return;
@@ -115,7 +145,7 @@ export const InventoryScreen: React.FC = () => {
           style={styles.headerActionBtn}
           onPress={() => setCategoryModalVisible(true)}
         >
-          <Text style={styles.headerActionText}>📁 Manage Categories ({categories.length})</Text>
+          <Text style={styles.headerActionText}>📁 Categories ({visibleCategories.length})</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -126,12 +156,71 @@ export const InventoryScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Division Selector for Owner or Division Header for Executive */}
+      {!isExecutive ? (
+        <View style={{ flexDirection: 'row', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingBottom: 8, gap: 8 }}>
+          {(['ALL', 'Dodla', 'Gopal Chips'] as const).map((comp) => {
+            const isSelected = selectedCompany === comp;
+            return (
+              <TouchableOpacity
+                key={comp}
+                style={[
+                  {
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    backgroundColor: isSelected
+                      ? comp === 'Gopal Chips'
+                        ? '#EA580C'
+                        : comp === 'Dodla'
+                        ? '#1E3A8A'
+                        : '#334155'
+                      : '#F1F5F9',
+                  },
+                ]}
+                onPress={() => {
+                  setSelectedCompany(comp);
+                  setSelectedCategoryId('ALL');
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isSelected ? '#FFFFFF' : '#475569' }}>
+                  {comp === 'ALL' ? '🏢 All Divisions' : comp === 'Dodla' ? 'Dodla' : 'Gopal Chips'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingBottom: 8 }}>
+          <View
+            style={{
+              backgroundColor: executiveCompany === 'Gopal Chips' ? '#FFF7ED' : '#EFF6FF',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: executiveCompany === 'Gopal Chips' ? '#FDBA74' : '#BFDBFE',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: '700',
+                color: executiveCompany === 'Gopal Chips' ? '#C2410C' : '#1E40AF',
+              }}
+            >
+              {executiveCompany === 'Gopal Chips' ? 'Gopal Chips Inventory' : 'Dodla Dairy Inventory'} • {user?.full_name}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* Category Filter Pills */}
       <View style={styles.categorySection}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={[{ id: 'ALL', name: 'All Categories' }, ...categories]}
+          data={[{ id: 'ALL', name: 'All Categories' }, ...visibleCategories]}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.categoryList}
           renderItem={({ item }) => {
@@ -211,9 +300,31 @@ export const InventoryScreen: React.FC = () => {
                   <View style={styles.cardTop}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.productName}>{item.name}</Text>
-                      <Text style={styles.categoryName}>
-                        {matchedCat?.name || 'Dairy'} &bull; HSN: {item.hsn_code}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+                        <Text style={styles.categoryName}>
+                          {matchedCat?.name || 'Item'} &bull; HSN: {item.hsn_code}
+                        </Text>
+                        {!isExecutive && (
+                          <View
+                            style={{
+                              backgroundColor: (item.company || 'Dodla') === 'Gopal Chips' ? '#FFEDD5' : '#DBEAFE',
+                              paddingHorizontal: 6,
+                              paddingVertical: 1,
+                              borderRadius: 4,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontWeight: '700',
+                                color: (item.company || 'Dodla') === 'Gopal Chips' ? '#C2410C' : '#1E40AF',
+                              }}
+                            >
+                              {item.company || 'Dodla'}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
 
                     {/* Stock Status Badge */}
@@ -340,12 +451,14 @@ export const InventoryScreen: React.FC = () => {
       <CategoryManagerModal
         visible={categoryModalVisible}
         onClose={() => setCategoryModalVisible(false)}
+        targetCompany={isExecutive ? executiveCompany : (selectedCompany === 'ALL' ? 'Dodla' : selectedCompany)}
       />
 
       <AddProductModal
         visible={addProductModalVisible}
         onClose={() => setAddProductModalVisible(false)}
         defaultCategoryId={selectedCategoryId}
+        targetCompany={isExecutive ? executiveCompany : (selectedCompany === 'ALL' ? 'Dodla' : selectedCompany)}
       />
     </View>
   );

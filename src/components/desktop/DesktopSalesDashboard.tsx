@@ -39,6 +39,7 @@ type SortColumn =
 export const DesktopSalesDashboard: React.FC = () => {
   const { routes, orders, categories, products, shops, markOrderAsPrinted, refreshData, clearAllOrders } = useStore();
 
+  const [selectedCompany, setSelectedCompany] = useState<'ALL' | 'Dodla' | 'Gopal Chips'>('ALL');
   const [selectedRouteId, setSelectedRouteId] = useState<string>('ALL');
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'printed'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -80,18 +81,29 @@ export const DesktopSalesDashboard: React.FC = () => {
     }
   };
 
+  const companyScopedOrders = useMemo(() => {
+    if (selectedCompany === 'ALL') return orders;
+    return orders.filter((o) => (o.company || 'Dodla') === selectedCompany);
+  }, [orders, selectedCompany]);
+
+  const displayRoutes = useMemo(() => {
+    if (selectedCompany === 'ALL') return routes;
+    return routes.filter((r) => (r.company || 'Dodla') === selectedCompany);
+  }, [routes, selectedCompany]);
+
   // KPI Calculations
   const kpis = useMemo(() => {
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, o) => sum + o.grand_total, 0);
-    const pendingOrders = orders.filter((o) => o.status === 'pending').length;
-    const printedOrders = orders.filter((o) => o.status === 'printed').length;
+    const totalOrders = companyScopedOrders.length;
+    const totalRevenue = companyScopedOrders.reduce((sum, o) => sum + o.grand_total, 0);
+    const pendingOrders = companyScopedOrders.filter((o) => o.status === 'pending').length;
+    const printedOrders = companyScopedOrders.filter((o) => o.status === 'printed').length;
     return { totalOrders, totalRevenue, pendingOrders, printedOrders };
-  }, [orders]);
+  }, [companyScopedOrders]);
 
   // Filtered & Sorted Orders
   const filteredOrders = useMemo(() => {
     let result = orders.filter((o) => {
+      if (selectedCompany !== 'ALL' && (o.company || 'Dodla') !== selectedCompany) return false;
       if (selectedRouteId !== 'ALL' && o.route_id !== selectedRouteId) return false;
       if (activeTab === 'pending' && o.status !== 'pending') return false;
       if (activeTab === 'printed' && o.status !== 'printed') return false;
@@ -203,7 +215,7 @@ export const DesktopSalesDashboard: React.FC = () => {
     });
 
     return result;
-  }, [orders, selectedRouteId, activeTab, columnFilters, sortColumn, sortAsc]);
+  }, [orders, selectedCompany, selectedRouteId, activeTab, columnFilters, sortColumn, sortAsc]);
 
   // Multi-Selection Handlers
   const handleToggleSelectOrder = (id: string) => {
@@ -269,6 +281,60 @@ export const DesktopSalesDashboard: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Top Company Division Filter Tabs */}
+      <View style={styles.companyDivisionBar}>
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'ALL' && styles.companyTabBtnActive,
+          ]}
+          onPress={() => setSelectedCompany('ALL')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'ALL' && styles.companyTabBtnTextActive,
+            ]}
+          >
+            All Bills ({orders.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'Dodla' && styles.companyTabBtnActiveDodla,
+          ]}
+          onPress={() => setSelectedCompany('Dodla')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'Dodla' && styles.companyTabBtnTextActiveDodla,
+            ]}
+          >
+            🔵 Dodla Bills ({orders.filter((o) => (o.company || 'Dodla') === 'Dodla').length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'Gopal Chips' && styles.companyTabBtnActiveGopal,
+          ]}
+          onPress={() => setSelectedCompany('Gopal Chips')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'Gopal Chips' && styles.companyTabBtnTextActiveGopal,
+            ]}
+          >
+            🟠 Gopal Chips Bills ({orders.filter((o) => o.company === 'Gopal Chips').length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Top KPI Summary Cards */}
       <View style={styles.kpiRow}>
         <View style={[styles.kpiCard, { borderLeftColor: '#1E3A8A' }]}>
@@ -304,8 +370,8 @@ export const DesktopSalesDashboard: React.FC = () => {
 
       {/* Visual Business Analytics & Performance Charts */}
       <SalesAnalyticsSection
-        orders={orders}
-        routes={routes}
+        orders={companyScopedOrders}
+        routes={displayRoutes}
         categories={categories}
         products={products}
         shops={shops}
@@ -331,7 +397,7 @@ export const DesktopSalesDashboard: React.FC = () => {
                   activeTab === 'all' && styles.statusTabTextActive,
                 ]}
               >
-                All ({orders.length})
+                All ({companyScopedOrders.length})
               </Text>
             </TouchableOpacity>
 
@@ -372,8 +438,8 @@ export const DesktopSalesDashboard: React.FC = () => {
               onChange={(e) => setSelectedRouteId(e.target.value)}
               style={styles.nativeSelect as any}
             >
-              <option value="ALL">All Routes ({routes.length})</option>
-              {routes.map((r) => (
+              <option value="ALL">All Routes ({displayRoutes.length})</option>
+              {displayRoutes.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
@@ -448,6 +514,9 @@ export const DesktopSalesDashboard: React.FC = () => {
             >
               <Text style={styles.thText}>Sr {sortColumn === 'srNo' ? (sortAsc ? '▲' : '▼') : ''}</Text>
             </TouchableOpacity>
+            <View style={[styles.thCell, { width: 95, justifyContent: 'center' }]}>
+              <Text style={styles.thText}>Division</Text>
+            </View>
             <TouchableOpacity
               style={[styles.thCell, { width: 140 }]}
               onPress={() => handleSort('orderNo')}
@@ -510,6 +579,7 @@ export const DesktopSalesDashboard: React.FC = () => {
           <View style={styles.searchFilterRow}>
             <View style={[styles.searchCell, { width: 45 }]} />
             <View style={[styles.searchCell, { width: 50 }]} />
+            <View style={[styles.searchCell, { width: 95 }]} />
             <View style={[styles.searchCell, { width: 140 }]}>
               <TextInput
                 style={styles.columnSearchInput}
@@ -611,6 +681,27 @@ export const DesktopSalesDashboard: React.FC = () => {
                   </View>
                   <View style={[styles.tdCell, { width: 50 }]}>
                     <Text style={styles.tdMuted}>{idx + 1}</Text>
+                  </View>
+                  <View style={[styles.tdCell, { width: 95, alignItems: 'center', justifyContent: 'center' }]}>
+                    <View
+                      style={[
+                        styles.companyBadge,
+                        ord.company === 'Gopal Chips'
+                          ? styles.companyBadgeGopal
+                          : styles.companyBadgeDodla,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.companyBadgeText,
+                          ord.company === 'Gopal Chips'
+                            ? styles.companyBadgeTextGopal
+                            : styles.companyBadgeTextDodla,
+                        ]}
+                      >
+                        {ord.company === 'Gopal Chips' ? 'Gopal' : 'Dodla'}
+                      </Text>
+                    </View>
                   </View>
                   <View style={[styles.tdCell, { width: 140 }]}>
                     <Text style={styles.tdInvoiceNo}>{ord.invoice_no}</Text>
@@ -1480,5 +1571,71 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     color: '#1E3A8A',
+  },
+  companyDivisionBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    gap: 10,
+    marginBottom: 16,
+    borderRadius: 8,
+  },
+  companyTabBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  companyTabBtnActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  companyTabBtnActiveDodla: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
+  },
+  companyTabBtnActiveGopal: {
+    backgroundColor: '#C2410C',
+    borderColor: '#C2410C',
+  },
+  companyTabBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  companyTabBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  companyTabBtnTextActiveDodla: {
+    color: '#FFFFFF',
+  },
+  companyTabBtnTextActiveGopal: {
+    color: '#FFFFFF',
+  },
+  companyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  companyBadgeDodla: {
+    backgroundColor: '#DBEAFE',
+  },
+  companyBadgeGopal: {
+    backgroundColor: '#FFEDD5',
+  },
+  companyBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  companyBadgeTextDodla: {
+    color: '#1E40AF',
+  },
+  companyBadgeTextGopal: {
+    color: '#9A3412',
   },
 });

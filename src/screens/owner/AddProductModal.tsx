@@ -11,17 +11,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
+import { CompanyDivision, GOPAL_CHIPS_HSN_OPTIONS } from '../../types';
 
 interface AddProductModalProps {
   visible: boolean;
   onClose: () => void;
   defaultCategoryId?: string;
+  targetCompany?: CompanyDivision;
 }
 
 export const AddProductModal: React.FC<AddProductModalProps> = ({
   visible,
   onClose,
   defaultCategoryId,
+  targetCompany,
 }) => {
   const { categories, addProduct } = useStore();
   const [categoryId, setCategoryId] = useState<string>(defaultCategoryId || '');
@@ -31,13 +34,22 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [stockQty, setStockQty] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Filter categories to only those belonging to the target company
+  const availableCategories = React.useMemo(() => {
+    if (!targetCompany) return categories;
+    return categories.filter((c) => (c.company || 'Dodla') === targetCompany);
+  }, [categories, targetCompany]);
+
+  const selectedCategoryObj = categories.find((c) => c.id === categoryId);
+  const effectiveCompany = targetCompany || selectedCategoryObj?.company || 'Dodla';
+
   const getHsnForCategory = (catId: string): string => {
     const cat = categories.find((c) => c.id === catId);
-    if (!cat) return '21069099';
+    if (!cat) return effectiveCompany === 'Gopal Chips' ? '20052000' : '21069099';
     if (cat.hsn_code) return cat.hsn_code;
     const catName = cat.name.toLowerCase();
     if (catName.includes('badam') || catName.includes('milk') || catName.includes('beverage')) return '22029990';
-    return '21069099';
+    return effectiveCompany === 'Gopal Chips' ? '20052000' : '21069099';
   };
 
   const handleSelectCategory = (catId: string) => {
@@ -53,12 +65,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setCategoryId(defaultCategoryId);
       const autoHsn = getHsnForCategory(defaultCategoryId);
       if (autoHsn) setHsnCode(autoHsn);
-    } else if (categories.length > 0 && !categoryId) {
-      setCategoryId(categories[0].id);
-      const autoHsn = getHsnForCategory(categories[0].id);
+    } else if (availableCategories.length > 0 && (!categoryId || !availableCategories.some(c => c.id === categoryId))) {
+      setCategoryId(availableCategories[0].id);
+      const autoHsn = getHsnForCategory(availableCategories[0].id);
       if (autoHsn) setHsnCode(autoHsn);
     }
-  }, [defaultCategoryId, categories]);
+  }, [defaultCategoryId, availableCategories]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -85,10 +97,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       await addProduct({
         category_id: categoryId,
         name: name.trim(),
-        hsn_code: hsnCode.trim() || '21069099',
+        hsn_code: hsnCode.trim() || (effectiveCompany === 'Gopal Chips' ? '20052000' : '21069099'),
         rate: numRate,
         stock_qty: numStock,
         gst_rate: 5.0, // Fixed 5% GST
+        company: effectiveCompany,
       });
 
       setName('');
@@ -97,9 +110,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setIsSubmitting(false);
       onClose();
       Alert.alert('Success', `Product "${name.trim()}" added to Godown!`);
-    } catch (e) {
+    } catch (e: any) {
       setIsSubmitting(false);
-      Alert.alert('Error', 'Failed to add product.');
+      Alert.alert('Error', e.message || 'Failed to add product.');
     }
   };
 
@@ -122,7 +135,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Select Category *</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catPills}>
-                {categories.map((c) => (
+                {availableCategories.map((c) => (
                   <TouchableOpacity
                     key={c.id}
                     style={[styles.catPill, categoryId === c.id && styles.catPillActive]}
@@ -146,7 +159,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               <Text style={styles.label}>Product Name *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Badam Milk 200ml or Soan Papdi 500g"
+                placeholder={effectiveCompany === 'Gopal Chips' ? 'e.g. Potato Wafers Salted 40g' : 'e.g. Badam Milk 200ml or Soan Papdi 500g'}
                 placeholderTextColor="#9CA3AF"
                 value={name}
                 onChangeText={setName}
@@ -157,26 +170,50 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Select HSN Number (for Invoice) *</Text>
               <View style={styles.hsnPillsRow}>
-                <TouchableOpacity
-                  style={[styles.hsnPill, hsnCode === '22029990' && styles.hsnPillActive]}
-                  onPress={() => setHsnCode('22029990')}
-                >
-                  <Text style={[styles.hsnPillText, hsnCode === '22029990' && styles.hsnPillTextActive]}>
-                    22029990 (Badam Milk)
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.hsnPill, hsnCode === '21069099' && styles.hsnPillActive]}
-                  onPress={() => setHsnCode('21069099')}
-                >
-                  <Text style={[styles.hsnPillText, hsnCode === '21069099' && styles.hsnPillTextActive]}>
-                    21069099 (Sweets)
-                  </Text>
-                </TouchableOpacity>
+                {effectiveCompany === 'Gopal Chips' ? (
+                  GOPAL_CHIPS_HSN_OPTIONS.map((code) => (
+                    <TouchableOpacity
+                      key={code}
+                      style={[styles.hsnPill, hsnCode === code && styles.hsnPillActive]}
+                      onPress={() => setHsnCode(code)}
+                    >
+                      <Text style={[styles.hsnPillText, hsnCode === code && styles.hsnPillTextActive]}>
+                        {code}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.hsnPill, hsnCode === '22029990' && styles.hsnPillActive]}
+                      onPress={() => setHsnCode('22029990')}
+                    >
+                      <Text style={[styles.hsnPillText, hsnCode === '22029990' && styles.hsnPillTextActive]}>
+                        22029990 (Badam Milk)
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.hsnPill, hsnCode === '21069099' && styles.hsnPillActive]}
+                      onPress={() => setHsnCode('21069099')}
+                    >
+                      <Text style={[styles.hsnPillText, hsnCode === '21069099' && styles.hsnPillTextActive]}>
+                        21069099 (Sweets)
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.hsnPill, hsnCode === '04012000' && styles.hsnPillActive]}
+                      onPress={() => setHsnCode('04012000')}
+                    >
+                      <Text style={[styles.hsnPillText, hsnCode === '04012000' && styles.hsnPillTextActive]}>
+                        04012000 (Milk & Curd)
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="HSN Code (e.g. 22029990 or 21069099)"
+                placeholder={effectiveCompany === 'Gopal Chips' ? 'HSN Code (e.g. 20052000 or 21069099)' : 'HSN Code (e.g. 22029990 or 21069099)'}
                 placeholderTextColor="#9CA3AF"
                 value={hsnCode}
                 onChangeText={setHsnCode}

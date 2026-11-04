@@ -27,10 +27,14 @@ export function formatDateTime(isoStringOrDate?: string | Date): string {
 }
 
 export function generateInvoiceNumber(currentCount: number = 0): string {
-  return String(currentCount + 1);
+  return `K-2627-${String(currentCount + 1).padStart(6, '0')}`;
 }
 
 export function generateOrderNumbers(currentCount: number = 0): { orderNo: string; invoiceNo: string } {
-  const invoiceNo = String(currentCount + 1);
-  return { orderNo: invoiceNo, invoiceNo };
+  const d = new Date();
+  const yy = String(d.getFullYear()).slice(2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const orderNo = `SO-${yy}${mm}-${String(currentCount + 1).padStart(5, '0')}`;
+  const invoiceNo = generateInvoiceNumber(currentCount);
+  return { orderNo, invoiceNo };
 }

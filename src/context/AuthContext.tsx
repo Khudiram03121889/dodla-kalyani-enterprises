@@ -64,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             phone: data.phone,
             full_name: data.full_name,
             role: data.role as UserRole,
+            company: (data.company as any) || (data.role === 'owner' ? 'ALL' : 'Dodla'),
             created_at: data.created_at,
           };
           setUser(userProfile);
@@ -87,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         phone: matchedUser.phone,
         full_name: matchedUser.full_name,
         role: matchedUser.role,
+        company: matchedUser.company,
       };
       setUser(userProfile);
       await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userProfile));
@@ -115,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phone: target.phone,
       full_name: target.full_name,
       role: newRole,
+      company: target.company,
     };
     setUser(userProfile);
     await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userProfile));

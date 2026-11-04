@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
-import { Shop, Route } from '../../types';
+import { Shop, Route, CompanyDivision } from '../../types';
 import { AddRouteModal } from './AddRouteModal';
 import { AddShopModal } from './AddShopModal';
 import { ManageRoutesModal } from './ManageRoutesModal';
@@ -26,8 +26,19 @@ export const RouteSelectScreen: React.FC = () => {
   const { user, logout } = useAuth();
   const { routes, shops, orders, deleteRoute, deleteShop, refreshData } = useStore();
 
+  const executiveCompany: CompanyDivision = (user?.company as CompanyDivision) || 'Dodla';
+
+  // Scoped routes & shops for this executive
+  const executiveRoutes = React.useMemo(() => {
+    return routes.filter((r) => (r.company || 'Dodla') === executiveCompany);
+  }, [routes, executiveCompany]);
+
+  const executiveShops = React.useMemo(() => {
+    return shops.filter((s) => (s.company || 'Dodla') === executiveCompany);
+  }, [shops, executiveCompany]);
+
   const [selectedRouteId, setSelectedRouteId] = useState<string>(
-    routes.length > 0 ? routes[0].id : ''
+    executiveRoutes.length > 0 ? executiveRoutes[0].id : ''
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [menuVisible, setMenuVisible] = useState(false);
@@ -46,16 +57,16 @@ export const RouteSelectScreen: React.FC = () => {
 
   // Default selection if route list changes
   React.useEffect(() => {
-    if (!selectedRouteId && routes.length > 0) {
-      setSelectedRouteId(routes[0].id);
-    } else if (selectedRouteId && !routes.some((r) => r.id === selectedRouteId) && routes.length > 0) {
-      setSelectedRouteId(routes[0].id);
+    if (!selectedRouteId && executiveRoutes.length > 0) {
+      setSelectedRouteId(executiveRoutes[0].id);
+    } else if (selectedRouteId && !executiveRoutes.some((r) => r.id === selectedRouteId) && executiveRoutes.length > 0) {
+      setSelectedRouteId(executiveRoutes[0].id);
     }
-  }, [routes, selectedRouteId]);
+  }, [executiveRoutes, selectedRouteId]);
 
-  const activeRoute = routes.find((r) => r.id === selectedRouteId) || routes[0];
+  const activeRoute = executiveRoutes.find((r) => r.id === selectedRouteId) || executiveRoutes[0];
 
-  const filteredShops = shops
+  const filteredShops = executiveShops
     .filter((s) => s.route_id === selectedRouteId)
     .filter((s) => {
       if (!searchQuery.trim()) return true;
@@ -101,10 +112,19 @@ export const RouteSelectScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: 14 }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: Math.max(insets.top, 12) + 8,
+            paddingBottom: 14,
+            backgroundColor: executiveCompany === 'Gopal Chips' ? '#C2410C' : '#1E3A8A',
+          },
+        ]}
+      >
         <View>
-          <Text style={styles.greeting}>Sales Executive</Text>
-          <Text style={styles.userName}>{user?.full_name || 'Bharath Kumar'}</Text>
+          <Text style={styles.greeting}>Kalyani Enterprises • {executiveCompany} Division</Text>
+          <Text style={styles.userName}>{user?.full_name || 'Executive'}</Text>
           <Text style={styles.dateText}>📅 {formatDate(new Date())} &bull; Mob: {user?.phone}</Text>
         </View>
 
@@ -141,14 +161,14 @@ export const RouteSelectScreen: React.FC = () => {
         </View>
 
         <FlatList
-          data={routes}
+          data={executiveRoutes}
           keyExtractor={(item) => item.id}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.routeList}
           renderItem={({ item }) => {
             const isSelected = item.id === selectedRouteId;
-            const shopCount = shops.filter((s) => s.route_id === item.id).length;
+            const shopCount = executiveShops.filter((s) => s.route_id === item.id).length;
             return (
               <TouchableOpacity
                 style={[styles.routeCard, isSelected && styles.routeCardActive]}
@@ -450,18 +470,21 @@ export const RouteSelectScreen: React.FC = () => {
         onClose={() => setManageRoutesModalVisible(false)}
         selectedRouteId={selectedRouteId}
         onSelectRoute={(id) => setSelectedRouteId(id)}
+        targetCompany={executiveCompany}
       />
 
       <AddRouteModal
         visible={addRouteModalVisible}
         onClose={() => setAddRouteModalVisible(false)}
         onRouteAdded={(id) => setSelectedRouteId(id)}
+        targetCompany={executiveCompany}
       />
 
       <AddShopModal
         visible={addShopModalVisible}
         onClose={() => setAddShopModalVisible(false)}
         selectedRouteId={selectedRouteId}
+        targetCompany={executiveCompany}
       />
     </View>
   );

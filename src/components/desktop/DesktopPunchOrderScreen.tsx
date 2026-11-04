@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
 import { useAuth } from '../../context/AuthContext';
-import { Shop, Product, Order } from '../../types';
+import { Shop, Product, Order, CompanyDivision } from '../../types';
 import { calculateOrderTax } from '../../utils/taxCalculator';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import { printInvoice, shareInvoicePdf } from '../../services/printService';
@@ -24,8 +24,26 @@ export const DesktopPunchOrderScreen: React.FC = () => {
   const { user } = useAuth();
   const { routes, shops, products, categories, punchOrder, markOrderAsPrinted } = useStore();
 
+  const [selectedDivision, setSelectedDivision] = useState<CompanyDivision>(
+    (user?.company as CompanyDivision) || 'Dodla'
+  );
+  const effectiveCompany: CompanyDivision = user?.company ? (user.company as CompanyDivision) : selectedDivision;
+
+  // Scoped routes & shops for this company
+  const scopedRoutes = useMemo(() => {
+    return routes.filter((r) => (r.company || 'Dodla') === effectiveCompany);
+  }, [routes, effectiveCompany]);
+
+  const scopedShops = useMemo(() => {
+    return shops.filter((s) => (s.company || 'Dodla') === effectiveCompany);
+  }, [shops, effectiveCompany]);
+
+  const scopedCategories = useMemo(() => {
+    return categories.filter((c) => (c.company || 'Dodla') === effectiveCompany);
+  }, [categories, effectiveCompany]);
+
   const [selectedRouteId, setSelectedRouteId] = useState<string>(
-    routes.length > 0 ? routes[0].id : ''
+    scopedRoutes.length > 0 ? scopedRoutes[0].id : ''
   );
   const [selectedShopId, setSelectedShopId] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -41,13 +59,13 @@ export const DesktopPunchOrderScreen: React.FC = () => {
 
   // Keep route and shop valid
   React.useEffect(() => {
-    if (!selectedRouteId && routes.length > 0) {
-      setSelectedRouteId(routes[0].id);
+    if ((!selectedRouteId || !scopedRoutes.some((r) => r.id === selectedRouteId)) && scopedRoutes.length > 0) {
+      setSelectedRouteId(scopedRoutes[0].id);
     }
-  }, [routes, selectedRouteId]);
+  }, [scopedRoutes, selectedRouteId]);
 
-  const activeRoute = routes.find((r) => r.id === selectedRouteId) || routes[0];
-  const routeShops = shops.filter((s) => s.route_id === selectedRouteId);
+  const activeRoute = scopedRoutes.find((r) => r.id === selectedRouteId) || scopedRoutes[0];
+  const routeShops = scopedShops.filter((s) => s.route_id === selectedRouteId);
 
   React.useEffect(() => {
     if (routeShops.length > 0) {
@@ -64,18 +82,19 @@ export const DesktopPunchOrderScreen: React.FC = () => {
   // Filter products
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
+      if ((p.company || 'Dodla') !== effectiveCompany) return false;
       const matchCat = selectedCategory === 'ALL' || p.category_id === selectedCategory;
       if (!matchCat) return false;
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
-      const cat = categories.find((c) => c.id === p.category_id);
+      const cat = scopedCategories.find((c) => c.id === p.category_id);
       return (
         p.name.toLowerCase().includes(q) ||
         (p.hsn_code && p.hsn_code.includes(q)) ||
         (cat && cat.name.toLowerCase().includes(q))
       );
     });
-  }, [products, categories, selectedCategory, searchQuery]);
+  }, [products, scopedCategories, selectedCategory, searchQuery, effectiveCompany]);
 
   // Live order calculations
   const orderSummary = useMemo(() => {
@@ -143,12 +162,13 @@ export const DesktopPunchOrderScreen: React.FC = () => {
     setIsPunching(true);
     try {
       const order = await punchOrder({
+        company: effectiveCompany,
         routeId: activeRoute?.id || selectedRouteId,
         routeName: activeRoute?.name || 'Default Route',
         shop: activeShop,
-        executiveId: user?.id || 'exec-web-01',
-        executiveName: user?.full_name || 'Bharath Kumar',
-        executivePhone: user?.phone || '9980989148',
+        executiveId: user?.id || (effectiveCompany === 'Gopal Chips' ? 'exec-gopal-01' : 'exec-dodla-01'),
+        executiveName: user?.full_name || (effectiveCompany === 'Gopal Chips' ? 'Yerriswamy' : 'Shekshavali'),
+        executivePhone: user?.phone || (effectiveCompany === 'Gopal Chips' ? '9535959564' : '9538344788'),
         items: itemsToPunch,
       });
 
@@ -170,10 +190,66 @@ export const DesktopPunchOrderScreen: React.FC = () => {
     })
     .filter((item): item is { product: Product; qty: number } => !!item.product);
 
+  const totalCompanyProducts = products.filter((p) => (p.company || 'Dodla') === effectiveCompany).length;
+
   return (
     <View style={styles.container}>
       {/* Route & Shop Selector Bar */}
       <View style={styles.selectorBar}>
+        {/* Company Division Selector or Badge */}
+        {!user?.company ? (
+          <View style={{ flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 8, padding: 3, marginRight: 12 }}>
+            <TouchableOpacity
+              onPress={() => setSelectedDivision('Dodla')}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 6,
+                backgroundColor: effectiveCompany === 'Dodla' ? '#1E3A8A' : 'transparent',
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: effectiveCompany === 'Dodla' ? '#fff' : '#4B5563' }}>
+                Dodla
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSelectedDivision('Gopal Chips')}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 6,
+                backgroundColor: effectiveCompany === 'Gopal Chips' ? '#C2410C' : 'transparent',
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: effectiveCompany === 'Gopal Chips' ? '#fff' : '#4B5563' }}>
+                Gopal Chips
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: effectiveCompany === 'Gopal Chips' ? '#FFEDD5' : '#DBEAFE',
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 6,
+              marginRight: 12,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '800',
+                color: effectiveCompany === 'Gopal Chips' ? '#9A3412' : '#1E40AF',
+              }}
+            >
+              {effectiveCompany} Division
+            </Text>
+          </View>
+        )}
+
         <View style={styles.selectorGroup}>
           <Text style={styles.selectorLabel}>Route:</Text>
           <select
@@ -181,7 +257,7 @@ export const DesktopPunchOrderScreen: React.FC = () => {
             onChange={(e) => setSelectedRouteId(e.target.value)}
             style={styles.selectInput as any}
           >
-            {routes.map((r) => (
+            {scopedRoutes.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
               </option>
@@ -256,12 +332,12 @@ export const DesktopPunchOrderScreen: React.FC = () => {
                     selectedCategory === 'ALL' && styles.categoryPillTextActive,
                   ]}
                 >
-                  All ({products.length})
+                  All ({totalCompanyProducts})
                 </Text>
               </TouchableOpacity>
 
-              {categories.map((c) => {
-                const count = products.filter((p) => p.category_id === c.id).length;
+              {scopedCategories.map((c) => {
+                const count = products.filter((p) => p.category_id === c.id && (p.company || 'Dodla') === effectiveCompany).length;
                 const isSelected = selectedCategory === c.id;
                 return (
                   <TouchableOpacity
@@ -480,6 +556,27 @@ export const DesktopPunchOrderScreen: React.FC = () => {
             <View style={styles.successModal}>
               <Text style={styles.successIcon}>✅</Text>
               <Text style={styles.successTitle}>Order Punched Successfully!</Text>
+              <View
+                style={{
+                  alignSelf: 'center',
+                  backgroundColor: (successOrder.company || effectiveCompany) === 'Gopal Chips' ? '#FFEDD5' : '#DBEAFE',
+                  paddingHorizontal: 10,
+                  paddingVertical: 3,
+                  borderRadius: 6,
+                  marginTop: 6,
+                  marginBottom: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '800',
+                    color: (successOrder.company || effectiveCompany) === 'Gopal Chips' ? '#9A3412' : '#1E40AF',
+                  }}
+                >
+                  {successOrder.company || effectiveCompany} Division
+                </Text>
+              </View>
               <Text style={styles.successInvoiceNo}>{successOrder.invoice_no}</Text>
               <Text style={styles.successShopName}>
                 {successOrder.shop_name} • {successOrder.route_name}
@@ -526,6 +623,7 @@ export const DesktopPunchOrderScreen: React.FC = () => {
         <AddRouteModal
           visible={addRouteVisible}
           onClose={() => setAddRouteVisible(false)}
+          targetCompany={effectiveCompany}
           onRouteAdded={(id) => setSelectedRouteId(id)}
         />
       )}
@@ -535,6 +633,7 @@ export const DesktopPunchOrderScreen: React.FC = () => {
         <AddShopModal
           visible={addShopVisible}
           onClose={() => setAddShopVisible(false)}
+          targetCompany={effectiveCompany}
           selectedRouteId={selectedRouteId}
           onShopAdded={(id) => setSelectedShopId(id)}
         />
@@ -545,6 +644,7 @@ export const DesktopPunchOrderScreen: React.FC = () => {
         <ManageRoutesModal
           visible={manageRoutesVisible}
           onClose={() => setManageRoutesVisible(false)}
+          targetCompany={effectiveCompany}
           selectedRouteId={selectedRouteId}
           onSelectRoute={(id) => setSelectedRouteId(id)}
         />

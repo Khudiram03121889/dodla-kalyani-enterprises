@@ -11,12 +11,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
+import { CompanyDivision } from '../../types';
 
 interface AddShopModalProps {
   visible: boolean;
   onClose: () => void;
   selectedRouteId: string;
   onShopAdded?: (shopId: string) => void;
+  targetCompany?: CompanyDivision;
 }
 
 export const AddShopModal: React.FC<AddShopModalProps> = ({
@@ -24,6 +26,7 @@ export const AddShopModal: React.FC<AddShopModalProps> = ({
   onClose,
   selectedRouteId,
   onShopAdded,
+  targetCompany,
 }) => {
   const { routes, addShop } = useStore();
   const [routeId, setRouteId] = useState(selectedRouteId);
@@ -35,16 +38,21 @@ export const AddShopModal: React.FC<AddShopModalProps> = ({
   const [fssai, setFssai] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const availableRoutes = React.useMemo(() => {
+    if (!targetCompany) return routes;
+    return routes.filter((r) => (r.company || 'Dodla') === targetCompany);
+  }, [routes, targetCompany]);
+
   // Sync routeId when modal opens with selected route
   React.useEffect(() => {
     if (visible) {
-      if (selectedRouteId) {
+      if (selectedRouteId && availableRoutes.some((r) => r.id === selectedRouteId)) {
         setRouteId(selectedRouteId);
-      } else if (routes.length > 0) {
-        setRouteId(routes[0].id);
+      } else if (availableRoutes.length > 0) {
+        setRouteId(availableRoutes[0].id);
       }
     }
-  }, [visible, selectedRouteId, routes]);
+  }, [visible, selectedRouteId, availableRoutes]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -75,6 +83,7 @@ export const AddShopModal: React.FC<AddShopModalProps> = ({
         incharge: incharge.trim() || undefined,
         gstin: gstin.trim() ? gstin.trim().toUpperCase() : undefined,
         fssai: fssai.trim() || undefined,
+        company: targetCompany || 'Dodla',
       });
 
       setName('');
@@ -113,7 +122,7 @@ export const AddShopModal: React.FC<AddShopModalProps> = ({
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Select Route *</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.routePills}>
-                {routes.map((r) => (
+                {availableRoutes.map((r) => (
                   <TouchableOpacity
                     key={r.id}
                     style={[styles.routePill, routeId === r.id && styles.routePillActive]}

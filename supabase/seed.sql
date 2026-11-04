@@ -3,11 +3,12 @@
 -- ==============================================================================
 
 -- 1. Default Users
-INSERT INTO dodla_profiles (id, phone, password_hash, full_name, role)
+INSERT INTO dodla_profiles (id, phone, password_hash, full_name, role, company)
 VALUES 
-  ('a0000000-0000-0000-0000-000000000001', '9900426623', 'kalyani1975', 'Kalyani Enterprises Owner', 'owner'),
-  ('a0000000-0000-0000-0000-000000000002', '9538344788', 'exec123', 'Bharath Kumar', 'executive')
-ON CONFLICT (phone) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, full_name = EXCLUDED.full_name;
+  ('a0000000-0000-0000-0000-000000000001', '9900426623', 'kalyani1975', 'Kalyani Enterprises Owner', 'owner', 'ALL'),
+  ('a0000000-0000-0000-0000-000000000002', '9538344788', 'exec123', 'Shekshavali', 'executive', 'Dodla'),
+  ('a0000000-0000-0000-0000-000000000003', '9535959564', 'exec123', 'Yerriswamy', 'executive', 'Gopal Chips')
+ON CONFLICT (phone) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, full_name = EXCLUDED.full_name, company = EXCLUDED.company;
 
 -- 2. Default Routes
 INSERT INTO dodla_routes (id, name)

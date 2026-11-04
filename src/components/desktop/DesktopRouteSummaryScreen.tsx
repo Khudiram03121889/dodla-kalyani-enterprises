@@ -16,22 +16,31 @@ import { Route, Order } from '../../types';
 export const DesktopRouteSummaryScreen: React.FC = () => {
   const { routes, orders } = useStore();
 
+  const [selectedCompany, setSelectedCompany] = useState<'ALL' | 'Dodla' | 'Gopal Chips'>('ALL');
+
+  const displayRoutes = React.useMemo(() => {
+    if (selectedCompany === 'ALL') return routes;
+    return routes.filter((r) => (r.company || 'Dodla') === selectedCompany);
+  }, [routes, selectedCompany]);
+
   const [selectedRouteId, setSelectedRouteId] = useState<string>(
-    routes.length > 0 ? routes[0].id : ''
+    displayRoutes.length > 0 ? displayRoutes[0].id : ''
   );
   const [isPrinting, setIsPrinting] = useState(false);
 
   // Keep selection valid if routes change
   React.useEffect(() => {
-    if (!selectedRouteId && routes.length > 0) {
-      setSelectedRouteId(routes[0].id);
-    } else if (selectedRouteId && !routes.some((r) => r.id === selectedRouteId) && routes.length > 0) {
-      setSelectedRouteId(routes[0].id);
+    if ((!selectedRouteId || !displayRoutes.some((r) => r.id === selectedRouteId)) && displayRoutes.length > 0) {
+      setSelectedRouteId(displayRoutes[0].id);
     }
-  }, [routes, selectedRouteId]);
+  }, [displayRoutes, selectedRouteId]);
 
-  const activeRoute = routes.find((r) => r.id === selectedRouteId) || routes[0];
-  const routeOrders = orders.filter((o) => o.route_id === selectedRouteId);
+  const activeRoute = displayRoutes.find((r) => r.id === selectedRouteId) || displayRoutes[0];
+  const routeOrders = orders.filter((o) => {
+    if (o.route_id !== selectedRouteId) return false;
+    if (selectedCompany !== 'ALL' && (o.company || 'Dodla') !== selectedCompany) return false;
+    return true;
+  });
   const totalAmount = routeOrders.reduce((sum, o) => sum + o.grand_total, 0);
   const totalQty = routeOrders.reduce((sum, o) => sum + o.total_qty, 0);
 
@@ -66,6 +75,60 @@ export const DesktopRouteSummaryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Company Division Tabs */}
+      <View style={styles.companyDivisionBar}>
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'ALL' && styles.companyTabBtnActive,
+          ]}
+          onPress={() => setSelectedCompany('ALL')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'ALL' && styles.companyTabBtnTextActive,
+            ]}
+          >
+            All Divisions
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'Dodla' && styles.companyTabBtnActiveDodla,
+          ]}
+          onPress={() => setSelectedCompany('Dodla')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'Dodla' && styles.companyTabBtnTextActiveDodla,
+            ]}
+          >
+            🔵 Dodla
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.companyTabBtn,
+            selectedCompany === 'Gopal Chips' && styles.companyTabBtnActiveGopal,
+          ]}
+          onPress={() => setSelectedCompany('Gopal Chips')}
+        >
+          <Text
+            style={[
+              styles.companyTabBtnText,
+              selectedCompany === 'Gopal Chips' && styles.companyTabBtnTextActiveGopal,
+            ]}
+          >
+            🟠 Gopal Chips
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Route Selector & Action Bar */}
       <View style={styles.toolbar}>
         <View style={styles.routePillsContainer}>
@@ -77,8 +140,12 @@ export const DesktopRouteSummaryScreen: React.FC = () => {
               onChange={(e) => setSelectedRouteId(e.target.value)}
               style={styles.routeDropdown as any}
             >
-              {routes.map((r) => {
-                const count = orders.filter((o) => o.route_id === r.id).length;
+              {displayRoutes.map((r) => {
+                const count = orders.filter((o) => {
+                  if (o.route_id !== r.id) return false;
+                  if (selectedCompany !== 'ALL' && (o.company || 'Dodla') !== selectedCompany) return false;
+                  return true;
+                }).length;
                 return (
                   <option key={r.id} value={r.id}>
                     {r.name} ({count} bills)
@@ -90,9 +157,13 @@ export const DesktopRouteSummaryScreen: React.FC = () => {
 
           {/* Fully visible wrapping route pills - no horizontal clipping */}
           <View style={styles.pillsWrapContainer}>
-            {routes.map((r) => {
+            {displayRoutes.map((r) => {
               const isSelected = r.id === selectedRouteId;
-              const count = orders.filter((o) => o.route_id === r.id).length;
+              const count = orders.filter((o) => {
+                if (o.route_id !== r.id) return false;
+                if (selectedCompany !== 'ALL' && (o.company || 'Dodla') !== selectedCompany) return false;
+                return true;
+              }).length;
               return (
                 <TouchableOpacity
                   key={r.id}
@@ -141,7 +212,7 @@ export const DesktopRouteSummaryScreen: React.FC = () => {
         <View style={[styles.kpiCard, { borderLeftColor: '#1E3A8A' }]}>
           <Text style={styles.kpiLabel}>Active Route</Text>
           <Text style={styles.kpiValue}>{activeRoute?.name || 'No Route'}</Text>
-          <Text style={styles.kpiSub}>Dodla Distribution Channel</Text>
+          <Text style={styles.kpiSub}>Kalyani Enterprises Distribution</Text>
         </View>
 
         <View style={[styles.kpiCard, { borderLeftColor: '#059669' }]}>
@@ -616,5 +687,50 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     marginTop: 4,
+  },
+  companyDivisionBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    gap: 10,
+    marginBottom: 16,
+    borderRadius: 8,
+  },
+  companyTabBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  companyTabBtnActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  companyTabBtnActiveDodla: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
+  },
+  companyTabBtnActiveGopal: {
+    backgroundColor: '#C2410C',
+    borderColor: '#C2410C',
+  },
+  companyTabBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  companyTabBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  companyTabBtnTextActiveDodla: {
+    color: '#FFFFFF',
+  },
+  companyTabBtnTextActiveGopal: {
+    color: '#FFFFFF',
   },
 });

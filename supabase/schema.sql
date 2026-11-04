@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS dodla_profiles (
   password_hash TEXT NOT NULL,
   full_name TEXT NOT NULL,
   role TEXT CHECK (role IN ('owner', 'executive')) NOT NULL DEFAULT 'executive',
+  company TEXT NOT NULL DEFAULT 'Dodla',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -20,6 +21,7 @@ CREATE TABLE IF NOT EXISTS dodla_profiles (
 CREATE TABLE IF NOT EXISTS dodla_routes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT UNIQUE NOT NULL,
+  company TEXT NOT NULL DEFAULT 'Dodla',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -33,6 +35,7 @@ CREATE TABLE IF NOT EXISTS dodla_shops (
   incharge TEXT,
   gstin VARCHAR(25),
   fssai VARCHAR(30),
+  company TEXT NOT NULL DEFAULT 'Dodla',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -41,6 +44,7 @@ CREATE TABLE IF NOT EXISTS dodla_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT UNIQUE NOT NULL,
   display_order INT DEFAULT 0,
+  company TEXT NOT NULL DEFAULT 'Dodla',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -54,6 +58,7 @@ CREATE TABLE IF NOT EXISTS dodla_products (
   stock_qty INT NOT NULL DEFAULT 0 CHECK (stock_qty >= 0),
   gst_rate NUMERIC(5,2) NOT NULL DEFAULT 5.00 CHECK (gst_rate >= 0),
   is_active BOOLEAN NOT NULL DEFAULT true,
+  company TEXT NOT NULL DEFAULT 'Dodla',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -62,6 +67,7 @@ CREATE TABLE IF NOT EXISTS dodla_orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_no TEXT UNIQUE NOT NULL,
   invoice_no TEXT UNIQUE NOT NULL,
+  company TEXT NOT NULL DEFAULT 'Dodla',
   route_id UUID REFERENCES dodla_routes(id) NOT NULL,
   route_name TEXT NOT NULL,
   shop_id UUID REFERENCES dodla_shops(id) NOT NULL,
@@ -156,11 +162,11 @@ BEGIN
   
   v_invoice_no := COALESCE(
     NULLIF(TRIM(p_order->>'invoice_no'), ''),
-    'G-2627-' || lpad(nextval('dodla_invoice_no_seq')::text, 6, '0')
+    'K-2627-' || lpad(nextval('dodla_invoice_no_seq')::text, 6, '0')
   );
 
   INSERT INTO dodla_orders (
-    order_no, invoice_no, route_id, route_name,
+    order_no, invoice_no, company, route_id, route_name,
     shop_id, shop_name, shop_phone, shop_address,
     shop_gstin, shop_fssai, shop_incharge,
     executive_id, executive_name, executive_phone,
@@ -169,6 +175,7 @@ BEGIN
   ) VALUES (
     v_order_no,
     v_invoice_no,
+    COALESCE(NULLIF(TRIM(p_order->>'company'), ''), 'Dodla'),
     (p_order->>'route_id')::uuid,
     (p_order->>'route_name'),
     (p_order->>'shop_id')::uuid,

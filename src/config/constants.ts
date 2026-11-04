@@ -21,6 +21,8 @@ export const COMPANY_DETAILS = {
   defaultGstRate: 5.0, // Fixed 5% GST across items
 };
 
+import { CompanyDivision } from '../types';
+
 export const DEFAULT_USERS = [
   {
     id: 'a0000000-0000-0000-0000-000000000001',
@@ -28,19 +30,22 @@ export const DEFAULT_USERS = [
     password: 'kalyani1975',
     full_name: 'Kalyani Enterprises Owner',
     role: 'owner' as const,
+    company: 'ALL' as const,
   },
   {
     id: 'a0000000-0000-0000-0000-000000000002',
-    phone: '9980989148',
+    phone: '9538344788',
     password: 'exec123',
-    full_name: 'Bharath Kumar',
+    full_name: 'Shekshavali',
     role: 'executive' as const,
+    company: 'Dodla' as CompanyDivision,
   },
   {
     id: 'a0000000-0000-0000-0000-000000000003',
-    phone: '9538344788',
+    phone: '9535959564',
     password: 'exec123',
-    full_name: 'Bharath Kumar',
+    full_name: 'Yerriswamy',
     role: 'executive' as const,
+    company: 'Gopal Chips' as CompanyDivision,
   },
 ];

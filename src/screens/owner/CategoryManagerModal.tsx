@@ -12,16 +12,18 @@ import {
   Platform,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
-import { Category } from '../../types';
+import { Category, CompanyDivision, GOPAL_CHIPS_HSN_OPTIONS } from '../../types';
 
 interface CategoryManagerModalProps {
   visible: boolean;
   onClose: () => void;
+  targetCompany?: CompanyDivision;
 }
 
 export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   visible,
   onClose,
+  targetCompany,
 }) => {
   const { categories, products, addCategory, updateCategory, deleteCategory } = useStore();
   const [newCatName, setNewCatName] = useState('');
@@ -30,6 +32,11 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editingCatName, setEditingCatName] = useState('');
   const [editingCatHsn, setEditingCatHsn] = useState('');
+
+  const visibleCategories = React.useMemo(() => {
+    if (!targetCompany) return categories;
+    return categories.filter((c) => (c.company || 'Dodla') === targetCompany);
+  }, [categories, targetCompany]);
 
   const handleAddCategory = async () => {
     const trimmed = newCatName.trim();
@@ -40,7 +47,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      await addCategory(trimmed, newCatHsn.trim() || undefined);
+      await addCategory(trimmed, newCatHsn.trim() || undefined, targetCompany || 'Dodla');
       setNewCatName('');
       setNewCatHsn('');
       setIsSubmitting(false);
@@ -135,13 +142,30 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
             <View>
               <Text style={styles.title}>Manage Categories</Text>
               <Text style={styles.sub}>
-                Add, rename, or delete Godown categories ({categories.length} total)
+                Add, rename, or delete {targetCompany || 'Godown'} categories ({visibleCategories.length} total)
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.close}>✕</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Quick HSN pills for Gopal Chips */}
+          {targetCompany === 'Gopal Chips' && (
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              {GOPAL_CHIPS_HSN_OPTIONS.map((code) => (
+                <TouchableOpacity
+                  key={code}
+                  style={[styles.addBtn, { backgroundColor: newCatHsn === code ? '#EA580C' : '#F1F5F9', paddingHorizontal: 12, paddingVertical: 4 }]}
+                  onPress={() => setNewCatHsn(code)}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: newCatHsn === code ? '#FFF' : '#334155' }}>
+                    {code}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Add Category Bar */}
           <View style={styles.addRow}>
@@ -154,7 +178,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
             />
             <TextInput
               style={[styles.input, { flex: 1.2 }]}
-              placeholder="HSN (e.g. 04012000)"
+              placeholder={targetCompany === 'Gopal Chips' ? 'HSN (20052000)' : 'HSN (e.g. 04012000)'}
               placeholderTextColor="#9CA3AF"
               value={newCatHsn}
               onChangeText={setNewCatHsn}
@@ -213,7 +237,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           {/* Existing Categories List */}
           <Text style={styles.listHeader}>Categories in Godown:</Text>
           <FlatList
-            data={categories}
+            data={visibleCategories}
             keyExtractor={(item) => item.id}
             style={styles.catList}
             showsVerticalScrollIndicator={false}

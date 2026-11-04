@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Route, Shop, Category, Product, Order, OrderItem } from '../types';
+import { Route, Shop, Category, Product, Order, OrderItem, CompanyDivision } from '../types';
 import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { calculateOrderTax } from '../utils/taxCalculator';
 import { generateOrderNumbers } from '../utils/formatters';
@@ -12,11 +12,11 @@ interface StoreContextType {
   products: Product[];
   orders: Order[];
   isLoading: boolean;
-  addRoute: (name: string) => Promise<Route>;
+  addRoute: (name: string, company?: CompanyDivision) => Promise<Route>;
   deleteRoute: (id: string) => Promise<void>;
   addShop: (shop: Omit<Shop, 'id' | 'created_at'>) => Promise<Shop>;
   deleteShop: (id: string) => Promise<void>;
-  addCategory: (name: string, hsnCode?: string) => Promise<Category>;
+  addCategory: (name: string, hsnCode?: string, company?: CompanyDivision) => Promise<Category>;
   updateCategory: (id: string, name: string, hsnCode?: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   addProduct: (product: Omit<Product, 'id' | 'created_at'>) => Promise<Product>;
@@ -30,6 +30,7 @@ interface StoreContextType {
     executiveId: string;
     executiveName: string;
     executivePhone: string;
+    company?: CompanyDivision;
     items: { product: Product; qty: number }[];
   }) => Promise<Order>;
   updateOrder: (
@@ -59,9 +60,11 @@ function generateUUID(): string {
 
 // Initial Seed Data (Fallback when offline & first launch)
 const SEED_ROUTES: Route[] = [
-  { id: 'b0000000-0000-0000-0000-000000000001', name: 'COWL BAZAR' },
-  { id: 'b0000000-0000-0000-0000-000000000002', name: 'CANTONMENT' },
-  { id: 'b0000000-0000-0000-0000-000000000003', name: 'GANDHI NAGAR' },
+  { id: 'b0000000-0000-0000-0000-000000000001', name: 'COWL BAZAR', company: 'Dodla' },
+  { id: 'b0000000-0000-0000-0000-000000000002', name: 'CANTONMENT', company: 'Dodla' },
+  { id: 'b0000000-0000-0000-0000-000000000003', name: 'GANDHI NAGAR', company: 'Dodla' },
+  { id: 'g0000000-0000-0000-0000-000000000001', name: 'MAIN MARKET', company: 'Gopal Chips' },
+  { id: 'g0000000-0000-0000-0000-000000000002', name: 'STATION ROAD', company: 'Gopal Chips' },
 ];
 
 const SEED_SHOPS: Shop[] = [
@@ -72,6 +75,7 @@ const SEED_SHOPS: Shop[] = [
     phone: '9945947413',
     address: 'COWL BAZAR, FIRST GATE - 583101',
     incharge: 'GADHILINGA',
+    company: 'Dodla',
   },
   {
     id: '5536adad-2ff7-4882-9e4c-428d553bd1d5',
@@ -80,6 +84,7 @@ const SEED_SHOPS: Shop[] = [
     phone: '7899421356',
     address: 'FIRST GATE NEAR COWL BAZAR - 583101',
     incharge: 'JALAN',
+    company: 'Dodla',
   },
   {
     id: 'f3f1b89f-f324-4489-8d09-28457f5a88f4',
@@ -88,6 +93,7 @@ const SEED_SHOPS: Shop[] = [
     phone: '9164487440',
     address: 'FIRST GATE - 583101',
     incharge: 'CHANDRA',
+    company: 'Dodla',
   },
   {
     id: '95bfb50e-11ed-4eef-b81a-37651f1819f5',
@@ -96,6 +102,7 @@ const SEED_SHOPS: Shop[] = [
     phone: '9563845210',
     address: 'FIRST GATE - 583101',
     incharge: 'SRINIVAS',
+    company: 'Dodla',
   },
   {
     id: '6d355d8b-1dbc-467c-8170-dd145ab5f34c',
@@ -104,14 +111,17 @@ const SEED_SHOPS: Shop[] = [
     phone: '8861211248',
     address: 'COWL BAZAR - 583101',
     incharge: 'NAMAZ',
+    company: 'Dodla',
   },
 ];
 
 const SEED_CATEGORIES: Category[] = [
-  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Badam Milk', hsn_code: '22029990', display_order: 1 },
-  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Soan Papdi', hsn_code: '21069099', display_order: 2 },
-  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Gulab Jamun', hsn_code: '21069099', display_order: 3 },
-  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Doodh Pedha', hsn_code: '21069099', display_order: 4 },
+  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Badam Milk', hsn_code: '22029990', display_order: 1, company: 'Dodla' },
+  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Soan Papdi', hsn_code: '21069099', display_order: 2, company: 'Dodla' },
+  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Gulab Jamun', hsn_code: '21069099', display_order: 3, company: 'Dodla' },
+  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Doodh Pedha', hsn_code: '21069099', display_order: 4, company: 'Dodla' },
+  { id: 'g0000000-0000-0000-0000-000000000001', name: 'Gopal Potato Chips', hsn_code: '20052000', display_order: 5, company: 'Gopal Chips' },
+  { id: 'g0000000-0000-0000-0000-000000000002', name: 'Gopal Namkeen & Snacks', hsn_code: '21069099', display_order: 6, company: 'Gopal Chips' },
 ];
 
 const SEED_PRODUCTS: Product[] = [];
@@ -146,23 +156,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ]);
 
         if (routesRes.data && !routesRes.error) {
-          setRoutes(routesRes.data);
-          await AsyncStorage.setItem(STORAGE_KEYS.ROUTES, JSON.stringify(routesRes.data));
+          const normRoutes: Route[] = routesRes.data.map((r: any) => ({ ...r, company: (r.company as CompanyDivision) || 'Dodla' }));
+          setRoutes(normRoutes);
+          await AsyncStorage.setItem(STORAGE_KEYS.ROUTES, JSON.stringify(normRoutes));
           remoteSuccess = true;
         }
         if (shopsRes.data && !shopsRes.error) {
-          setShops(shopsRes.data);
-          await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(shopsRes.data));
+          const normShops: Shop[] = shopsRes.data.map((s: any) => ({ ...s, company: (s.company as CompanyDivision) || 'Dodla' }));
+          setShops(normShops);
+          await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(normShops));
           remoteSuccess = true;
         }
         if (catsRes.data && !catsRes.error) {
-          setCategories(catsRes.data);
-          await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(catsRes.data));
+          const normCats: Category[] = catsRes.data.map((c: any) => ({ ...c, company: (c.company as CompanyDivision) || 'Dodla' }));
+          setCategories(normCats);
+          await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(normCats));
           remoteSuccess = true;
         }
         if (prodsRes.data && !prodsRes.error) {
-          setProducts(prodsRes.data);
-          await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(prodsRes.data));
+          const normProds: Product[] = prodsRes.data.map((p: any) => ({ ...p, company: (p.company as CompanyDivision) || 'Dodla' }));
+          setProducts(normProds);
+          await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(normProds));
           remoteSuccess = true;
         }
         if (ordersRes.data && !ordersRes.error) {
@@ -170,12 +184,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const savedOrders = await AsyncStorage.getItem(STORAGE_KEYS.ORDERS);
           const localOrders: Order[] = savedOrders ? JSON.parse(savedOrders) : [];
 
+          const remoteOrders: Order[] = ordersRes.data.map((o: any) => ({
+            ...o,
+            company: (o.company as CompanyDivision) || 'Dodla',
+          }));
+
           // Map remote order numbers
-          const remoteOrderNos = new Set(ordersRes.data.map((o: any) => o.order_no));
+          const remoteOrderNos = new Set(remoteOrders.map((o: any) => o.order_no));
           const unsyncedOrders = localOrders.filter((o) => !remoteOrderNos.has(o.order_no));
 
           // Merge: remote orders first + any unsynced local offline orders
-          const mergedOrders = [...ordersRes.data, ...unsyncedOrders];
+          const mergedOrders = [...remoteOrders, ...unsyncedOrders];
 
           setOrders(mergedOrders);
           await AsyncStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(mergedOrders));
@@ -300,7 +319,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const addRoute = async (name: string): Promise<Route> => {
+  const addRoute = async (name: string, company: CompanyDivision = 'Dodla'): Promise<Route> => {
     const trimmed = name.trim();
     if (!trimmed) {
       throw new Error('Route name cannot be empty.');
@@ -309,6 +328,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newRoute: Route = {
       id: generateUUID(),
       name: trimmed,
+      company,
       created_at: new Date().toISOString(),
     };
 
@@ -316,7 +336,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         const { data, error } = await supabase
           .from('dodla_routes')
-          .insert([{ id: newRoute.id, name: trimmed }])
+          .insert([{ id: newRoute.id, name: trimmed, company }])
           .select()
           .single();
         if (error) {
@@ -326,6 +346,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (data) {
           newRoute.id = data.id;
           newRoute.created_at = data.created_at;
+          newRoute.company = data.company || company;
         }
       } catch (e: any) {
         console.error('addRoute error:', e);
@@ -365,8 +386,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addShop = async (shopData: Omit<Shop, 'id' | 'created_at'>): Promise<Shop> => {
+    const parentRoute = routes.find((r) => r.id === shopData.route_id);
+    const effectiveCompany: CompanyDivision = shopData.company || parentRoute?.company || 'Dodla';
+
     const newShop: Shop = {
       ...shopData,
+      company: effectiveCompany,
       id: generateUUID(),
       created_at: new Date().toISOString(),
     };
@@ -384,6 +409,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             incharge: shopData.incharge?.trim() || null,
             gstin: shopData.gstin?.trim() || null,
             fssai: shopData.fssai?.trim() || null,
+            company: effectiveCompany,
           }])
           .select()
           .single();
@@ -394,6 +420,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (data) {
           newShop.id = data.id;
           newShop.created_at = data.created_at;
+          newShop.company = data.company || effectiveCompany;
         }
       } catch (e: any) {
         console.error('addShop error:', e);
@@ -421,18 +448,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await AsyncStorage.setItem(STORAGE_KEYS.SHOPS, JSON.stringify(updated));
   };
 
-  const addCategory = async (name: string, hsnCode?: string): Promise<Category> => {
+  const addCategory = async (name: string, hsnCode?: string, company: CompanyDivision = 'Dodla'): Promise<Category> => {
     const trimmed = name.trim();
     if (!trimmed) {
       throw new Error('Category name cannot be empty.');
     }
 
-    const trimmedHsn = hsnCode?.trim() || '04012000';
+    const defaultHsn = company === 'Gopal Chips' ? '20052000' : '04012000';
+    const trimmedHsn = hsnCode?.trim() || defaultHsn;
 
     const newCat: Category = {
       id: generateUUID(),
       name: trimmed,
       hsn_code: trimmedHsn,
+      company,
       display_order: categories.length + 1,
       created_at: new Date().toISOString(),
     };
@@ -446,6 +475,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             name: trimmed,
             hsn_code: trimmedHsn,
             display_order: newCat.display_order,
+            company,
           }])
           .select()
           .single();
@@ -457,6 +487,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           newCat.id = data.id;
           newCat.created_at = data.created_at;
           newCat.hsn_code = data.hsn_code;
+          newCat.company = data.company || company;
         }
       } catch (e: any) {
         console.error('addCategory error:', e);
@@ -551,8 +582,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addProduct = async (productData: Omit<Product, 'id' | 'created_at'>): Promise<Product> => {
+    const parentCat = categories.find((c) => c.id === productData.category_id);
+    const effectiveCompany: CompanyDivision = productData.company || parentCat?.company || 'Dodla';
+
     const newProd: Product = {
       ...productData,
+      company: effectiveCompany,
       id: generateUUID(),
       created_at: new Date().toISOString(),
     };
@@ -569,6 +604,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             rate: productData.rate,
             stock_qty: productData.stock_qty,
             gst_rate: productData.gst_rate,
+            company: effectiveCompany,
           }])
           .select()
           .single();
@@ -579,6 +615,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (data) {
           newProd.id = data.id;
           newProd.created_at = data.created_at;
+          newProd.company = data.company || effectiveCompany;
         }
       } catch (e: any) {
         console.error('addProduct error:', e);
@@ -642,12 +679,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     executiveId: string;
     executiveName: string;
     executivePhone: string;
+    company?: CompanyDivision;
     items: { product: Product; qty: number }[];
   }): Promise<Order> => {
     // 1. Calculate tax and totals
     const taxCalc = calculateOrderTax(
       params.items.map((i) => ({ qty: i.qty, rate: i.product.rate, gstRate: i.product.gst_rate }))
     );
+
+    const effectiveCompany: CompanyDivision =
+      params.company || (params.shop.company as CompanyDivision) || 'Dodla';
 
     const { orderNo, invoiceNo } = generateOrderNumbers(orders.length);
     let orderId = generateUUID();
@@ -657,7 +698,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const lineTaxable = Number((item.qty * item.product.rate).toFixed(2));
       const lineGst = Number(((lineTaxable * (item.product.gst_rate || 5.0)) / 100).toFixed(2));
       const matchedCat = categories.find((c) => c.id === item.product.category_id);
-      const effectiveHsn = item.product.hsn_code?.trim() || matchedCat?.hsn_code?.trim() || '04012000';
+      const effectiveHsn = item.product.hsn_code?.trim() || matchedCat?.hsn_code?.trim() || (effectiveCompany === 'Gopal Chips' ? '20052000' : '04012000');
 
       return {
         id: generateUUID(),
@@ -673,6 +714,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         gst_rate: item.product.gst_rate || 5.0,
         gst_amount: lineGst,
         total_amount: Number((lineTaxable + lineGst).toFixed(2)),
+        company: effectiveCompany,
       };
     });
 
@@ -681,6 +723,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: orderId,
       order_no: orderNo,
       invoice_no: invoiceNo,
+      company: effectiveCompany,
       route_id: params.routeId,
       route_name: params.routeName,
       shop_id: params.shop.id,
@@ -711,6 +754,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const orderPayload = {
           order_no: newOrder.order_no,
           invoice_no: newOrder.invoice_no,
+          company: effectiveCompany,
           route_id: newOrder.route_id,
           route_name: newOrder.route_name,
           shop_id: newOrder.shop_id,

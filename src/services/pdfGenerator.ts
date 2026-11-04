@@ -25,14 +25,22 @@ const CATEGORY_HSN_MAP: Record<string, string> = {
   'dodla paneer & sweets': '21069099',
   'dodla milk & curd': '04012000',
   'dodla ghee & butter': '04059020',
+  'chips & wafers': '20052000',
+  'potato wafers': '20052000',
+  'banana chips': '20052000',
+  'namkeen & snacks': '21069099',
+  'gopal namkeen': '21069099',
+  'sev & bhujia': '21069099',
+  'gopal chips': '20052000',
 };
 
-export function getCategoryHsn(catName?: string): string {
-  if (!catName) return '21069099';
+export function getCategoryHsn(catName?: string, company?: string): string {
+  if (!catName) return company === 'Gopal Chips' ? '20052000' : '21069099';
   const lower = catName.trim().toLowerCase();
   if (CATEGORY_HSN_MAP[lower]) return CATEGORY_HSN_MAP[lower];
   if (lower.includes('badam') || lower.includes('flavour')) return '22029990';
-  return '21069099';
+  if (lower.includes('chip') || lower.includes('wafer')) return '20052000';
+  return company === 'Gopal Chips' ? '20052000' : '21069099';
 }
 
 function generateInvoiceBoxContent(order: Order): string {
@@ -66,7 +74,7 @@ function generateInvoiceBoxContent(order: Order): string {
 
   const itemRowsHtml = order.items
     .map((item, idx) => {
-      const hsn = item.hsn_code || getCategoryHsn(item.category_name);
+      const hsn = item.hsn_code || getCategoryHsn(item.category_name, order.company);
       return `
       <tr>
         <td style="text-align: center;">${idx + 1}</td>
@@ -123,7 +131,7 @@ function generateInvoiceBoxContent(order: Order): string {
         </td>
         <td class="invoice-col">
           <div class="invoice-meta-top">
-            <div><strong>Invoice No.</strong> <span style="font-size: 11px; font-weight: 900;">${escapeHtml(order.invoice_no)}</span></div>
+            <div><strong>Invoice No.</strong> <span style="font-size: 11px; font-weight: 900;">${escapeHtml(order.invoice_no)}</span>${order.company ? ` <span style="font-size: 8.5px; font-weight: 800; border: 1px solid #000; padding: 1px 4px; border-radius: 2px;">${escapeHtml(order.company.toUpperCase())}</span>` : ''}</div>
             <div style="margin-top: 2px;"><strong>Invoice Date :</strong> ${formattedDate}</div>
           </div>
           <table class="salesman-subtable">

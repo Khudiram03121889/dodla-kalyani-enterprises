@@ -11,14 +11,22 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
-import { Product, Category } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import { Product, Category, CompanyDivision } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { CategoryManagerModal } from '../../screens/owner/CategoryManagerModal';
 import { AddProductModal } from '../../screens/owner/AddProductModal';
 
 export const DesktopInventoryScreen: React.FC = () => {
+  const { user, role } = useAuth();
   const { categories, products, updateStock, deleteProduct, refreshData } = useStore();
 
+  const isExecutive = role === 'executive';
+  const executiveCompany: CompanyDivision = (user?.company as CompanyDivision) || 'Dodla';
+
+  const [selectedCompany, setSelectedCompany] = useState<'ALL' | CompanyDivision>(
+    isExecutive ? executiveCompany : 'ALL'
+  );
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -29,14 +37,35 @@ export const DesktopInventoryScreen: React.FC = () => {
   const [restockProduct, setRestockProduct] = useState<Product | null>(null);
   const [restockAdjustment, setRestockAdjustment] = useState('');
 
+  // Sync executive company
+  React.useEffect(() => {
+    if (isExecutive) {
+      setSelectedCompany(executiveCompany);
+    }
+  }, [isExecutive, executiveCompany]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshData();
     setIsRefreshing(false);
   };
 
+  const visibleCategories = useMemo(() => {
+    if (isExecutive) {
+      return categories.filter((c) => (c.company || 'Dodla') === executiveCompany);
+    }
+    if (selectedCompany !== 'ALL') {
+      return categories.filter((c) => (c.company || 'Dodla') === selectedCompany);
+    }
+    return categories;
+  }, [categories, isExecutive, executiveCompany, selectedCompany]);
+
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
+      const pComp = p.company || 'Dodla';
+      if (isExecutive && pComp !== executiveCompany) return false;
+      if (!isExecutive && selectedCompany !== 'ALL' && pComp !== selectedCompany) return false;
+
       const matchCat = selectedCategoryId === 'ALL' || p.category_id === selectedCategoryId;
       if (!matchCat) return false;
       if (!searchQuery.trim()) return true;
@@ -48,7 +77,7 @@ export const DesktopInventoryScreen: React.FC = () => {
         (cat && cat.name.toLowerCase().includes(q))
       );
     });
-  }, [products, categories, selectedCategoryId, searchQuery]);
+  }, [products, categories, isExecutive, executiveCompany, selectedCompany, selectedCategoryId, searchQuery]);
 
   const handleApplyRestock = async () => {
     if (!restockProduct) return;
@@ -110,32 +139,90 @@ export const DesktopInventoryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Company Division Tabs (Owner) or Division Header (Executive) */}
+      {!isExecutive ? (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {(['ALL', 'Dodla', 'Gopal Chips'] as const).map((comp) => {
+            const isSelected = selectedCompany === comp;
+            return (
+              <TouchableOpacity
+                key={comp}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor: isSelected
+                    ? comp === 'Gopal Chips'
+                      ? '#EA580C'
+                      : comp === 'Dodla'
+                      ? '#1E3A8A'
+                      : '#1E293B'
+                    : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: isSelected ? 'transparent' : '#CBD5E1',
+                }}
+                onPress={() => {
+                  setSelectedCompany(comp);
+                  setSelectedCategoryId('ALL');
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isSelected ? '#FFFFFF' : '#475569' }}>
+                  {comp === 'ALL' ? '🏢 All Divisions' : comp === 'Dodla' ? 'Dodla' : 'Gopal Chips'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#FFFFFF',
+            padding: 12,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: '700',
+              color: executiveCompany === 'Gopal Chips' ? '#C2410C' : '#1E40AF',
+            }}
+          >
+            {executiveCompany === 'Gopal Chips' ? 'Gopal Chips Inventory Workstation' : 'Dodla Dairy Inventory Workstation'}
+          </Text>
+        </View>
+      )}
+
       {/* Top Inventory Metrics */}
       <View style={styles.kpiRow}>
         <View style={[styles.kpiCard, { borderLeftColor: '#1E3A8A' }]}>
           <Text style={styles.kpiLabel}>Total Products</Text>
-          <Text style={styles.kpiValue}>{totalItems}</Text>
-          <Text style={styles.kpiSub}>Across {categories.length} categories</Text>
+          <Text style={styles.kpiValue}>{filteredProducts.length}</Text>
+          <Text style={styles.kpiSub}>Across {visibleCategories.length} categories</Text>
         </View>
 
         <View style={[styles.kpiCard, { borderLeftColor: '#059669' }]}>
           <Text style={styles.kpiLabel}>Total Stock Units</Text>
-          <Text style={[styles.kpiValue, { color: '#059669' }]}>{totalStockUnits}</Text>
+          <Text style={[styles.kpiValue, { color: '#059669' }]}>{filteredProducts.reduce((sum, p) => sum + p.stock_qty, 0)}</Text>
           <Text style={styles.kpiSub}>Available in Godown</Text>
         </View>
 
         <View style={[styles.kpiCard, { borderLeftColor: '#0284C7' }]}>
           <Text style={styles.kpiLabel}>Godown Inventory Valuation</Text>
           <Text style={[styles.kpiValue, { color: '#0284C7' }]}>
-            {formatCurrency(totalStockValuation)}
+            {formatCurrency(filteredProducts.reduce((sum, p) => sum + p.stock_qty * p.rate, 0))}
           </Text>
           <Text style={styles.kpiSub}>Wholesale value</Text>
         </View>
 
         <View style={[styles.kpiCard, { borderLeftColor: '#EF4444' }]}>
           <Text style={styles.kpiLabel}>Low / Out of Stock</Text>
-          <Text style={[styles.kpiValue, { color: outOfStockCount > 0 ? '#DC2626' : '#D97706' }]}>
-            {outOfStockCount} out / {lowStockCount} low
+          <Text style={[styles.kpiValue, { color: filteredProducts.filter((p) => p.stock_qty === 0).length > 0 ? '#DC2626' : '#D97706' }]}>
+            {filteredProducts.filter((p) => p.stock_qty === 0).length} out / {filteredProducts.filter((p) => p.stock_qty > 0 && p.stock_qty <= 20).length} low
           </Text>
           <Text style={styles.kpiSub}>Requires restock</Text>
         </View>
@@ -159,11 +246,11 @@ export const DesktopInventoryScreen: React.FC = () => {
                   selectedCategoryId === 'ALL' && styles.categoryPillTextActive,
                 ]}
               >
-                All Categories ({products.length})
+                All Categories ({filteredProducts.length})
               </Text>
             </TouchableOpacity>
 
-            {categories.map((c) => {
+            {visibleCategories.map((c) => {
               const count = products.filter((p) => p.category_id === c.id).length;
               const isSelected = selectedCategoryId === c.id;
               return (
@@ -232,6 +319,7 @@ export const DesktopInventoryScreen: React.FC = () => {
           <View style={styles.thRow}>
             <Text style={[styles.th, { width: 45 }]}>#</Text>
             <Text style={[styles.th, { flex: 2 }]}>Product Name</Text>
+            <Text style={[styles.th, { width: 100, textAlign: 'center' }]}>Division</Text>
             <Text style={[styles.th, { width: 140 }]}>Category</Text>
             <Text style={[styles.th, { width: 100 }]}>HSN Code</Text>
             <Text style={[styles.th, { width: 110, textAlign: 'right' }]}>Rate (₹)</Text>
@@ -264,6 +352,26 @@ export const DesktopInventoryScreen: React.FC = () => {
                   <Text style={[styles.tdMuted, { width: 45 }]}>{idx + 1}</Text>
                   <View style={{ flex: 2, paddingRight: 10 }}>
                     <Text style={styles.prodName}>{p.name}</Text>
+                  </View>
+                  <View style={{ width: 100, alignItems: 'center' }}>
+                    <View
+                      style={{
+                        backgroundColor: (p.company || 'Dodla') === 'Gopal Chips' ? '#FFEDD5' : '#DBEAFE',
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '700',
+                          color: (p.company || 'Dodla') === 'Gopal Chips' ? '#C2410C' : '#1E40AF',
+                        }}
+                      >
+                        {p.company || 'Dodla'}
+                      </Text>
+                    </View>
                   </View>
                   <Text style={[styles.tdText, { width: 140 }]} numberOfLines={1}>
                     {categories.find((c) => c.id === p.category_id)?.name || '-'}
@@ -412,6 +520,7 @@ export const DesktopInventoryScreen: React.FC = () => {
         <CategoryManagerModal
           visible={categoryModalVisible}
           onClose={() => setCategoryModalVisible(false)}
+          targetCompany={isExecutive ? executiveCompany : (selectedCompany === 'ALL' ? 'Dodla' : selectedCompany)}
         />
       )}
 
@@ -420,6 +529,7 @@ export const DesktopInventoryScreen: React.FC = () => {
         <AddProductModal
           visible={addProductModalVisible}
           onClose={() => setAddProductModalVisible(false)}
+          targetCompany={isExecutive ? executiveCompany : (selectedCompany === 'ALL' ? 'Dodla' : selectedCompany)}
         />
       )}
     </View>
