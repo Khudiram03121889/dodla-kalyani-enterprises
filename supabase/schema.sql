@@ -20,9 +20,10 @@ CREATE TABLE IF NOT EXISTS dodla_profiles (
 -- 3. Routes Table
 CREATE TABLE IF NOT EXISTS dodla_routes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
   company TEXT NOT NULL DEFAULT 'Dodla',
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT dodla_routes_name_company_key UNIQUE (name, company)
 );
 
 -- 4. Shops Table (In-route party master)
@@ -42,10 +43,12 @@ CREATE TABLE IF NOT EXISTS dodla_shops (
 -- 5. Categories Table (Owner-managed item categories)
 CREATE TABLE IF NOT EXISTS dodla_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  hsn_code VARCHAR(20) DEFAULT '21069099',
   display_order INT DEFAULT 0,
   company TEXT NOT NULL DEFAULT 'Dodla',
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT dodla_categories_name_company_key UNIQUE (name, company)
 );
 
 -- 6. Products Table (Godown Inventory items with rate and 5% GST)
@@ -68,16 +71,16 @@ CREATE TABLE IF NOT EXISTS dodla_orders (
   order_no TEXT UNIQUE NOT NULL,
   invoice_no TEXT UNIQUE NOT NULL,
   company TEXT NOT NULL DEFAULT 'Dodla',
-  route_id UUID REFERENCES dodla_routes(id) NOT NULL,
+  route_id UUID REFERENCES dodla_routes(id) ON DELETE SET NULL,
   route_name TEXT NOT NULL,
-  shop_id UUID REFERENCES dodla_shops(id) NOT NULL,
+  shop_id UUID REFERENCES dodla_shops(id) ON DELETE SET NULL,
   shop_name TEXT NOT NULL,
   shop_phone TEXT NOT NULL,
   shop_address TEXT NOT NULL,
   shop_gstin TEXT,
   shop_fssai TEXT,
   shop_incharge TEXT,
-  executive_id UUID REFERENCES dodla_profiles(id),
+  executive_id UUID REFERENCES dodla_profiles(id) ON DELETE SET NULL,
   executive_name TEXT NOT NULL,
   executive_phone TEXT NOT NULL,
   total_qty INT NOT NULL DEFAULT 0 CHECK (total_qty >= 0),
@@ -99,12 +102,14 @@ CREATE TABLE IF NOT EXISTS dodla_order_items (
   product_id UUID REFERENCES dodla_products(id) ON DELETE SET NULL,
   product_name TEXT NOT NULL,
   category_name TEXT NOT NULL,
+  hsn_code VARCHAR(20),
   qty INT NOT NULL DEFAULT 1 CHECK (qty > 0),
   rate NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (rate >= 0),
   taxable_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (taxable_amount >= 0),
   gst_rate NUMERIC(5,2) NOT NULL DEFAULT 5.00 CHECK (gst_rate >= 0),
   gst_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00,
-  total_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (total_amount >= 0)
+  total_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (total_amount >= 0),
+  company TEXT NOT NULL DEFAULT 'Dodla'
 );
 
 -- Indexes for Foreign Keys & Timestamps
@@ -149,11 +154,15 @@ DECLARE
   v_order_id uuid;
   v_item jsonb;
   v_product_id uuid;
+  v_executive_id uuid;
   v_qty int;
   v_order_no text;
   v_invoice_no text;
   v_curr_stock int;
+  v_company text;
 BEGIN
+  v_company := COALESCE(NULLIF(TRIM(p_order->>'company'), ''), 'Dodla');
+
   -- Generate canonical sequence numbers if not provided or to guarantee uniqueness
   v_order_no := COALESCE(
     NULLIF(TRIM(p_order->>'order_no'), ''),
@@ -165,6 +174,13 @@ BEGIN
     'K-2627-' || lpad(nextval('dodla_invoice_no_seq')::text, 6, '0')
   );
 
+  -- Safely validate executive_id: must be valid UUID AND must exist in dodla_profiles
+  IF (p_order->>'executive_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    SELECT id INTO v_executive_id FROM dodla_profiles WHERE id = (p_order->>'executive_id')::uuid;
+  ELSE
+    v_executive_id := NULL;
+  END IF;
+
   INSERT INTO dodla_orders (
     order_no, invoice_no, company, route_id, route_name,
     shop_id, shop_name, shop_phone, shop_address,
@@ -175,7 +191,7 @@ BEGIN
   ) VALUES (
     v_order_no,
     v_invoice_no,
-    COALESCE(NULLIF(TRIM(p_order->>'company'), ''), 'Dodla'),
+    v_company,
     (p_order->>'route_id')::uuid,
     (p_order->>'route_name'),
     (p_order->>'shop_id')::uuid,
@@ -185,11 +201,7 @@ BEGIN
     NULLIF(TRIM(p_order->>'shop_gstin'), ''),
     NULLIF(TRIM(p_order->>'shop_fssai'), ''),
     NULLIF(TRIM(p_order->>'shop_incharge'), ''),
-    CASE 
-      WHEN (p_order->>'executive_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' 
-      THEN (p_order->>'executive_id')::uuid 
-      ELSE NULL 
-    END,
+    v_executive_id,
     (p_order->>'executive_name'),
     (p_order->>'executive_phone'),
     GREATEST(0, (p_order->>'total_qty')::int),
@@ -214,19 +226,21 @@ BEGIN
 
     -- Insert Order Item
     INSERT INTO dodla_order_items (
-      order_id, product_id, product_name, category_name,
-      qty, rate, taxable_amount, gst_rate, gst_amount, total_amount
+      order_id, product_id, product_name, category_name, hsn_code,
+      qty, rate, taxable_amount, gst_rate, gst_amount, total_amount, company
     ) VALUES (
       v_order_id,
       v_product_id,
       (v_item->>'product_name'),
       (v_item->>'category_name'),
+      NULLIF(TRIM(v_item->>'hsn_code'), ''),
       v_qty,
       (v_item->>'rate')::numeric,
       (v_item->>'taxable_amount')::numeric,
       (v_item->>'gst_rate')::numeric,
       (v_item->>'gst_amount')::numeric,
-      (v_item->>'total_amount')::numeric
+      (v_item->>'total_amount')::numeric,
+      v_company
     );
 
     -- Stock decrement with concurrency row lock
@@ -246,6 +260,7 @@ BEGIN
     'id', v_order_id, 
     'order_no', v_order_no, 
     'invoice_no', v_invoice_no, 
+    'company', v_company,
     'status', 'success'
   );
 END;
