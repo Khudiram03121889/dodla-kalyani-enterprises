@@ -69,6 +69,8 @@ export const LoginScreen: React.FC = () => {
                 maxLength={10}
                 placeholder="Enter 10-digit number"
                 placeholderTextColor="#94A3B8"
+                autoComplete="off"
+                autoCorrect={false}
                 value={phone}
                 onChangeText={setPhone}
               />
@@ -225,48 +227,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
-  },
-  demoSection: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  demoButtonRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  demoChip: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  ownerChip: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-  },
-  ownerChipText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#1D4ED8',
-  },
-  execChip: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-  },
-  execChipText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#15803D',
-  },
-  chipPhone: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#475569',
-    marginTop: 2,
   },
   footerStatus: {
     flexDirection: 'row',

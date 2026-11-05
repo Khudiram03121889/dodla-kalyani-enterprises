@@ -50,6 +50,7 @@ export interface Product {
   rate: number; // Base selling rate per unit/box
   stock_qty: number; // Available inventory in godown
   gst_rate: number; // Default 5%
+  is_active?: boolean;
   company?: CompanyDivision;
   created_at?: string;
 }

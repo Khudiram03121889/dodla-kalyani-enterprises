@@ -265,3 +265,210 @@ BEGIN
   );
 END;
 $$;
+
+
+-- ==============================================================================
+-- GOPAL CHIPS DIVISION TABLES & FUNCTIONS
+-- ==============================================================================
+
+-- 9. Sequences for Gopal Chips Invoicing
+CREATE SEQUENCE IF NOT EXISTS gopal_order_no_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS gopal_invoice_no_seq START WITH 1 INCREMENT BY 1;
+
+-- 10. Gopal Routes Table
+CREATE TABLE IF NOT EXISTS public.gopal_routes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 11. Gopal Shops Table
+CREATE TABLE IF NOT EXISTS public.gopal_shops (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  route_id UUID NOT NULL REFERENCES public.gopal_routes(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone VARCHAR(15) NOT NULL,
+  address TEXT NOT NULL,
+  incharge TEXT,
+  gstin VARCHAR(15),
+  fssai VARCHAR(14),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 12. Gopal Categories Table
+CREATE TABLE IF NOT EXISTS public.gopal_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  hsn_code VARCHAR(20) DEFAULT '20052000',
+  display_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 13. Gopal Products Table
+CREATE TABLE IF NOT EXISTS public.gopal_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category_id UUID NOT NULL REFERENCES public.gopal_categories(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  hsn_code VARCHAR(20) DEFAULT '20052000',
+  rate NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (rate >= 0),
+  stock_qty INT NOT NULL DEFAULT 0 CHECK (stock_qty >= 0),
+  gst_rate NUMERIC(5,2) NOT NULL DEFAULT 5.00 CHECK (gst_rate >= 0),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 14. Gopal Orders Table
+CREATE TABLE IF NOT EXISTS public.gopal_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_no TEXT NOT NULL UNIQUE,
+  invoice_no TEXT NOT NULL UNIQUE,
+  route_id UUID REFERENCES public.gopal_routes(id) ON DELETE SET NULL,
+  route_name TEXT NOT NULL,
+  shop_id UUID REFERENCES public.gopal_shops(id) ON DELETE SET NULL,
+  shop_name TEXT NOT NULL,
+  shop_phone TEXT NOT NULL,
+  shop_address TEXT NOT NULL,
+  shop_gstin TEXT,
+  shop_fssai TEXT,
+  shop_incharge TEXT,
+  executive_id UUID REFERENCES public.dodla_profiles(id) ON DELETE SET NULL,
+  executive_name TEXT NOT NULL,
+  executive_phone TEXT NOT NULL,
+  total_qty INT NOT NULL DEFAULT 0 CHECK (total_qty >= 0),
+  taxable_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (taxable_amount >= 0),
+  cgst_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  sgst_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  total_gst NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  round_off NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  grand_total NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (grand_total >= 0),
+  status TEXT NOT NULL DEFAULT 'pending',
+  printed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 15. Gopal Order Items Table
+CREATE TABLE IF NOT EXISTS public.gopal_order_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES public.gopal_orders(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES public.gopal_products(id) ON DELETE SET NULL,
+  product_name TEXT NOT NULL,
+  category_name TEXT NOT NULL,
+  hsn_code VARCHAR(20),
+  qty INT NOT NULL DEFAULT 1 CHECK (qty >= 0),
+  rate NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (rate >= 0),
+  taxable_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (taxable_amount >= 0),
+  gst_rate NUMERIC(5,2) NOT NULL DEFAULT 5.00 CHECK (gst_rate >= 0),
+  gst_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (gst_amount >= 0),
+  total_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (total_amount >= 0)
+);
+
+-- 16. Gopal Order Punch Stored Procedure
+CREATE OR REPLACE FUNCTION public.punch_gopal_order(p_order jsonb, p_items jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_order_id uuid;
+  v_item jsonb;
+  v_product_id uuid;
+  v_executive_id uuid;
+  v_qty int;
+  v_order_no text;
+  v_invoice_no text;
+  v_curr_stock int;
+BEGIN
+  v_order_no := COALESCE(
+    NULLIF(TRIM(p_order->>'order_no'), ''),
+    'SO-GOPAL-' || to_char(now(), 'YYMM') || '-' || lpad(nextval('gopal_order_no_seq')::text, 5, '0')
+  );
+  
+  v_invoice_no := COALESCE(
+    NULLIF(TRIM(p_order->>'invoice_no'), ''),
+    'K-2627-' || lpad(nextval('gopal_invoice_no_seq')::text, 6, '0')
+  );
+
+  IF (p_order->>'executive_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    SELECT id INTO v_executive_id FROM dodla_profiles WHERE id = (p_order->>'executive_id')::uuid;
+  ELSE
+    v_executive_id := NULL;
+  END IF;
+
+  INSERT INTO gopal_orders (
+    order_no, invoice_no, route_id, route_name,
+    shop_id, shop_name, shop_phone, shop_address,
+    shop_gstin, shop_fssai, shop_incharge,
+    executive_id, executive_name, executive_phone,
+    total_qty, taxable_amount, cgst_amount, sgst_amount,
+    total_gst, round_off, grand_total, status
+  ) VALUES (
+    v_order_no,
+    v_invoice_no,
+    (p_order->>'route_id')::uuid,
+    (p_order->>'route_name'),
+    (p_order->>'shop_id')::uuid,
+    (p_order->>'shop_name'),
+    (p_order->>'shop_phone'),
+    (p_order->>'shop_address'),
+    NULLIF(TRIM(p_order->>'shop_gstin'), ''),
+    NULLIF(TRIM(p_order->>'shop_fssai'), ''),
+    NULLIF(TRIM(p_order->>'shop_incharge'), ''),
+    v_executive_id,
+    (p_order->>'executive_name'),
+    (p_order->>'executive_phone'),
+    GREATEST(0, (p_order->>'total_qty')::int),
+    (p_order->>'taxable_amount')::numeric,
+    (p_order->>'cgst_amount')::numeric,
+    (p_order->>'sgst_amount')::numeric,
+    (p_order->>'total_gst')::numeric,
+    (p_order->>'round_off')::numeric,
+    (p_order->>'grand_total')::numeric,
+    'pending'
+  ) RETURNING id INTO v_order_id;
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
+  LOOP
+    v_product_id := CASE 
+      WHEN (v_item->>'product_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' 
+      THEN (v_item->>'product_id')::uuid 
+      ELSE NULL 
+    END;
+    v_qty := GREATEST(1, (v_item->>'qty')::int);
+
+    INSERT INTO gopal_order_items (
+      order_id, product_id, product_name, category_name, hsn_code,
+      qty, rate, taxable_amount, gst_rate, gst_amount, total_amount
+    ) VALUES (
+      v_order_id,
+      v_product_id,
+      (v_item->>'product_name'),
+      (v_item->>'category_name'),
+      NULLIF(TRIM(v_item->>'hsn_code'), ''),
+      v_qty,
+      (v_item->>'rate')::numeric,
+      (v_item->>'taxable_amount')::numeric,
+      (v_item->>'gst_rate')::numeric,
+      (v_item->>'gst_amount')::numeric,
+      (v_item->>'total_amount')::numeric
+    );
+
+    IF v_product_id IS NOT NULL THEN
+      SELECT stock_qty INTO v_curr_stock 
+      FROM gopal_products 
+      WHERE id = v_product_id 
+      FOR UPDATE;
+
+      UPDATE gopal_products
+      SET stock_qty = GREATEST(0, stock_qty - v_qty)
+      WHERE id = v_product_id;
+    END IF;
+  END LOOP;
+
+  RETURN jsonb_build_object(
+    'id', v_order_id, 
+    'order_no', v_order_no, 
+    'invoice_no', v_invoice_no, 
+    'status', 'success'
+  );
+END;
+$$;
