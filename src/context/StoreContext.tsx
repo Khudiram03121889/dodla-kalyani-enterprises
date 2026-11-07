@@ -699,9 +699,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       params.items.map((i) => ({ qty: i.qty, rate: i.product.rate, gstRate: i.product.gst_rate }))
     );
 
-    const { orderNo, invoiceNo } = generateOrderNumbers(
-      target === 'Gopal Chips' ? gopalOrders.length : dodlaOrders.length
-    );
+    // Shared continuous invoice sequence across both Dodla and Gopal
+    const allExistingOrders = [...dodlaOrders, ...gopalOrders];
+    let maxInvoiceSeq = 0;
+    for (const o of allExistingOrders) {
+      if (o.invoice_no) {
+        const m = o.invoice_no.match(/(\d+)$/);
+        if (m) {
+          const num = parseInt(m[1], 10);
+          if (!isNaN(num) && num > maxInvoiceSeq) maxInvoiceSeq = num;
+        }
+      }
+    }
+    const currentSharedCount = Math.max(maxInvoiceSeq, allExistingOrders.length);
+    const { orderNo, invoiceNo } = generateOrderNumbers(currentSharedCount);
     let orderId = generateUUID();
 
     const currentCategories = target === 'Gopal Chips' ? gopalCategories : dodlaCategories;

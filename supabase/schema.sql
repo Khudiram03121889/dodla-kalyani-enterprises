@@ -5,6 +5,7 @@
 -- 1. Sequences for Collision-Free Sequential Invoicing
 CREATE SEQUENCE IF NOT EXISTS dodla_order_no_seq START WITH 1001;
 CREATE SEQUENCE IF NOT EXISTS dodla_invoice_no_seq START WITH 1001;
+CREATE SEQUENCE IF NOT EXISTS shared_invoice_no_seq START WITH 1 INCREMENT BY 1;
 
 -- 2. Profiles Table (Phone number as username + role)
 CREATE TABLE IF NOT EXISTS dodla_profiles (
@@ -163,16 +164,9 @@ DECLARE
 BEGIN
   v_company := COALESCE(NULLIF(TRIM(p_order->>'company'), ''), 'Dodla');
 
-  -- Generate canonical sequence numbers if not provided or to guarantee uniqueness
-  v_order_no := COALESCE(
-    NULLIF(TRIM(p_order->>'order_no'), ''),
-    'SO-' || to_char(now(), 'YYMM') || '-' || lpad(nextval('dodla_order_no_seq')::text, 5, '0')
-  );
-  
-  v_invoice_no := COALESCE(
-    NULLIF(TRIM(p_order->>'invoice_no'), ''),
-    'K-2627-' || lpad(nextval('dodla_invoice_no_seq')::text, 6, '0')
-  );
+  -- Shared sequential invoice numbering across Dodla & Gopal
+  v_invoice_no := 'K-2627-' || lpad(nextval('shared_invoice_no_seq')::text, 6, '0');
+  v_order_no := v_invoice_no;
 
   -- Safely validate executive_id: must be valid UUID AND must exist in dodla_profiles
   IF (p_order->>'executive_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
@@ -378,15 +372,9 @@ DECLARE
   v_invoice_no text;
   v_curr_stock int;
 BEGIN
-  v_order_no := COALESCE(
-    NULLIF(TRIM(p_order->>'order_no'), ''),
-    'SO-GOPAL-' || to_char(now(), 'YYMM') || '-' || lpad(nextval('gopal_order_no_seq')::text, 5, '0')
-  );
-  
-  v_invoice_no := COALESCE(
-    NULLIF(TRIM(p_order->>'invoice_no'), ''),
-    'K-2627-' || lpad(nextval('gopal_invoice_no_seq')::text, 6, '0')
-  );
+  -- Shared sequential invoice numbering across Dodla & Gopal
+  v_invoice_no := 'K-2627-' || lpad(nextval('shared_invoice_no_seq')::text, 6, '0');
+  v_order_no := v_invoice_no;
 
   IF (p_order->>'executive_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
     SELECT id INTO v_executive_id FROM dodla_profiles WHERE id = (p_order->>'executive_id')::uuid;

@@ -31,10 +31,7 @@ export function generateInvoiceNumber(currentCount: number = 0): string {
 }
 
 export function generateOrderNumbers(currentCount: number = 0): { orderNo: string; invoiceNo: string } {
-  const d = new Date();
-  const yy = String(d.getFullYear()).slice(2);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const orderNo = `SO-${yy}${mm}-${String(currentCount + 1).padStart(5, '0')}`;
   const invoiceNo = generateInvoiceNumber(currentCount);
-  return { orderNo, invoiceNo };
+  // ponytail: order_no unified with invoice_no per user decision to eliminate separate order numbers
+  return { orderNo: invoiceNo, invoiceNo };
 }
