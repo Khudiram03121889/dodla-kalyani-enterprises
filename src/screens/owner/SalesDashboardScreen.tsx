@@ -183,8 +183,10 @@ export const SalesDashboardScreen: React.FC = () => {
         let valB: any = b.created_at;
 
         if (sortColumn === 'orderNo') {
-          const numA = parseInt(a.invoice_no, 10);
-          const numB = parseInt(b.invoice_no, 10);
+          const matchA = a.invoice_no.match(/(\d+)$/);
+          const matchB = b.invoice_no.match(/(\d+)$/);
+          const numA = matchA ? parseInt(matchA[1], 10) : NaN;
+          const numB = matchB ? parseInt(matchB[1], 10) : NaN;
           if (!isNaN(numA) && !isNaN(numB)) {
             valA = numA;
             valB = numB;

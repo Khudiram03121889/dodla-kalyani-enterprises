@@ -26,12 +26,13 @@ export function formatDateTime(isoStringOrDate?: string | Date): string {
   return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
-export function generateInvoiceNumber(currentCount: number = 0): string {
-  return `K-2627-${String(currentCount + 1).padStart(6, '0')}`;
+export function generateInvoiceNumber(currentCount: number = 0, company?: string): string {
+  const prefix = company === 'Gopal Chips' ? 'KG' : 'KD';
+  return `${prefix}-2627-${String(currentCount + 1).padStart(6, '0')}`;
 }
 
-export function generateOrderNumbers(currentCount: number = 0): { orderNo: string; invoiceNo: string } {
-  const invoiceNo = generateInvoiceNumber(currentCount);
+export function generateOrderNumbers(currentCount: number = 0, company?: string): { orderNo: string; invoiceNo: string } {
+  const invoiceNo = generateInvoiceNumber(currentCount, company);
   // ponytail: order_no unified with invoice_no per user decision to eliminate separate order numbers
   return { orderNo: invoiceNo, invoiceNo };
 }

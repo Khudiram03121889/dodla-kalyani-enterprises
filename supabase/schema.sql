@@ -164,8 +164,8 @@ DECLARE
 BEGIN
   v_company := COALESCE(NULLIF(TRIM(p_order->>'company'), ''), 'Dodla');
 
-  -- Shared sequential invoice numbering across Dodla & Gopal
-  v_invoice_no := 'K-2627-' || lpad(nextval('shared_invoice_no_seq')::text, 6, '0');
+  -- Shared sequential invoice numbering across Dodla & Gopal (KD for Dodla)
+  v_invoice_no := 'KD-2627-' || lpad(nextval('shared_invoice_no_seq')::text, 6, '0');
   v_order_no := v_invoice_no;
 
   -- Safely validate executive_id: must be valid UUID AND must exist in dodla_profiles
@@ -372,8 +372,8 @@ DECLARE
   v_invoice_no text;
   v_curr_stock int;
 BEGIN
-  -- Shared sequential invoice numbering across Dodla & Gopal
-  v_invoice_no := 'K-2627-' || lpad(nextval('shared_invoice_no_seq')::text, 6, '0');
+  -- Shared sequential invoice numbering across Dodla & Gopal (KG for Gopal)
+  v_invoice_no := 'KG-2627-' || lpad(nextval('shared_invoice_no_seq')::text, 6, '0');
   v_order_no := v_invoice_no;
 
   IF (p_order->>'executive_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN

@@ -712,7 +712,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
     const currentSharedCount = Math.max(maxInvoiceSeq, allExistingOrders.length);
-    const { orderNo, invoiceNo } = generateOrderNumbers(currentSharedCount);
+    const { orderNo, invoiceNo } = generateOrderNumbers(currentSharedCount, target);
     let orderId = generateUUID();
 
     const currentCategories = target === 'Gopal Chips' ? gopalCategories : dodlaCategories;
@@ -817,8 +817,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (rpcRes && rpcRes.id && !rpcErr) {
           orderId = rpcRes.id;
           newOrder.id = rpcRes.id;
-          if (rpcRes.order_no) newOrder.order_no = rpcRes.order_no;
-          if (rpcRes.invoice_no) newOrder.invoice_no = rpcRes.invoice_no;
+          if (rpcRes.invoice_no) {
+            const prefix = target === 'Gopal Chips' ? 'KG' : 'KD';
+            const numPart = rpcRes.invoice_no.match(/(\d+)$/)?.[1];
+            newOrder.invoice_no = numPart ? `${prefix}-2627-${numPart}` : rpcRes.invoice_no;
+            newOrder.order_no = newOrder.invoice_no;
+          }
           newOrder.items.forEach((it) => {
             it.order_id = rpcRes.id;
           });
