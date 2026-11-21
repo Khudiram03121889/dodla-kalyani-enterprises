@@ -176,7 +176,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           await AsyncStorage.setItem(STORAGE_KEYS.DODLA_CATEGORIES, JSON.stringify(normDCats));
         }
         if (dProdsRes.data && !dProdsRes.error) {
-          const normDProds: Product[] = dProdsRes.data.map((p: any) => ({ ...p, company: 'Dodla' as CompanyDivision }));
+          const normDProds: Product[] = dProdsRes.data.map((p: any) => ({ ...p, uom: p.uom || 'box', company: 'Dodla' as CompanyDivision }));
           setDodlaProducts(normDProds);
           await AsyncStorage.setItem(STORAGE_KEYS.DODLA_PRODUCTS, JSON.stringify(normDProds));
         }
@@ -184,7 +184,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const normDOrders: Order[] = dOrdersRes.data.map((o: any) => ({
             ...o,
             company: 'Dodla' as CompanyDivision,
-            items: (o.items || []).map((it: any) => ({ ...it, company: 'Dodla' as CompanyDivision })),
+            items: (o.items || []).map((it: any) => ({ ...it, uom: it.uom || 'box', company: 'Dodla' as CompanyDivision })),
           }));
           setDodlaOrders(normDOrders);
           await AsyncStorage.setItem(STORAGE_KEYS.DODLA_ORDERS, JSON.stringify(normDOrders));
@@ -207,7 +207,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           await AsyncStorage.setItem(STORAGE_KEYS.GOPAL_CATEGORIES, JSON.stringify(normGCats));
         }
         if (gProdsRes.data && !gProdsRes.error) {
-          const normGProds: Product[] = gProdsRes.data.map((p: any) => ({ ...p, company: 'Gopal Chips' as CompanyDivision }));
+          const normGProds: Product[] = gProdsRes.data.map((p: any) => ({ ...p, uom: p.uom || 'box', company: 'Gopal Chips' as CompanyDivision }));
           setGopalProducts(normGProds);
           await AsyncStorage.setItem(STORAGE_KEYS.GOPAL_PRODUCTS, JSON.stringify(normGProds));
         }
@@ -215,7 +215,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const normGOrders: Order[] = gOrdersRes.data.map((o: any) => ({
             ...o,
             company: 'Gopal Chips' as CompanyDivision,
-            items: (o.items || []).map((it: any) => ({ ...it, company: 'Gopal Chips' as CompanyDivision })),
+            items: (o.items || []).map((it: any) => ({ ...it, uom: it.uom || 'box', company: 'Gopal Chips' as CompanyDivision })),
           }));
           setGopalOrders(normGOrders);
           await AsyncStorage.setItem(STORAGE_KEYS.GOPAL_ORDERS, JSON.stringify(normGOrders));
@@ -258,11 +258,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setDodlaCategories(savedDCats ? JSON.parse(savedDCats) : SEED_DODLA_CATEGORIES);
         setGopalCategories(savedGCats ? JSON.parse(savedGCats) : SEED_GOPAL_CATEGORIES);
 
-        setDodlaProducts(savedDProds ? JSON.parse(savedDProds) : []);
-        setGopalProducts(savedGProds ? JSON.parse(savedGProds) : []);
+        setDodlaProducts(savedDProds ? JSON.parse(savedDProds).map((p: any) => ({ ...p, uom: p.uom || 'box' })) : []);
+        setGopalProducts(savedGProds ? JSON.parse(savedGProds).map((p: any) => ({ ...p, uom: p.uom || 'box' })) : []);
 
-        setDodlaOrders(savedDOrders ? JSON.parse(savedDOrders) : []);
-        setGopalOrders(savedGOrders ? JSON.parse(savedGOrders) : []);
+        setDodlaOrders(savedDOrders ? JSON.parse(savedDOrders).map((o: any) => ({
+          ...o,
+          items: (o.items || []).map((it: any) => ({ ...it, uom: it.uom || 'box' })),
+        })) : []);
+        setGopalOrders(savedGOrders ? JSON.parse(savedGOrders).map((o: any) => ({
+          ...o,
+          items: (o.items || []).map((it: any) => ({ ...it, uom: it.uom || 'box' })),
+        })) : []);
       } catch (err) {
         console.warn('Error reading local offline storage:', err);
       }
@@ -572,6 +578,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const newProd: Product = {
       ...productData,
+      uom: productData.uom || 'box',
       company: target,
       id: generateUUID(),
       created_at: new Date().toISOString(),
@@ -585,6 +592,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           category_id: productData.category_id,
           name: productData.name.trim(),
           hsn_code: productData.hsn_code?.trim() || (target === 'Gopal Chips' ? '20052000' : '22029990'),
+          uom: newProd.uom || 'box',
           rate: productData.rate,
           stock_qty: productData.stock_qty,
           gst_rate: productData.gst_rate ?? 5.0,
@@ -622,6 +630,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const dbUpdates: any = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name.trim();
     if (updates.hsn_code !== undefined) dbUpdates.hsn_code = updates.hsn_code.trim();
+    if (updates.uom !== undefined) dbUpdates.uom = updates.uom;
     if (updates.rate !== undefined) dbUpdates.rate = updates.rate;
     if (updates.stock_qty !== undefined) dbUpdates.stock_qty = updates.stock_qty;
     if (updates.gst_rate !== undefined) dbUpdates.gst_rate = updates.gst_rate;
@@ -729,6 +738,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         product_name: item.product.name,
         category_name: matchedCat?.name || 'General',
         hsn_code: effectiveHsn,
+        uom: item.product.uom || 'box',
         qty: item.qty,
         rate: item.product.rate,
         amount: lineTaxable,
@@ -800,6 +810,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           product_name: oi.product_name,
           category_name: oi.category_name,
           hsn_code: oi.hsn_code,
+          uom: oi.uom || 'box',
           qty: oi.qty,
           rate: oi.rate,
           taxable_amount: oi.taxable_amount,
@@ -892,6 +903,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         product_name: item.product.name,
         category_name: matchedCat?.name || 'General',
         hsn_code: effectiveHsn,
+        uom: item.product.uom || 'box',
         qty: item.qty,
         rate: item.product.rate,
         amount: lineTaxable,
@@ -933,6 +945,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         product_name: oi.product_name,
         category_name: oi.category_name,
         hsn_code: oi.hsn_code,
+        uom: oi.uom || 'box',
         qty: oi.qty,
         rate: oi.rate,
         taxable_amount: oi.taxable_amount,

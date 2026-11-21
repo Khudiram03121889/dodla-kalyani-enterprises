@@ -82,6 +82,7 @@ function generateInvoiceBoxContent(order: Order): string {
           ${escapeHtml(item.product_name)} ( ${escapeHtml(hsn)} )
         </td>
         <td style="text-align: center;">${item.qty}</td>
+        <td style="text-align: center; font-size: 8px;">${escapeHtml(item.uom || 'box')}</td>
         <td style="text-align: right;">${(item.qty * item.rate).toFixed(2)}</td>
         <td style="text-align: right;">${item.taxable_amount.toFixed(2)}</td>
         <td style="text-align: center;">${item.gst_rate}</td>
@@ -156,12 +157,13 @@ function generateInvoiceBoxContent(order: Order): string {
         <tr>
           <th style="width: 25px;">Sr. No.</th>
           <th>Product Name</th>
-          <th style="width: 32px;">Qty</th>
-          <th style="width: 55px;">Amount</th>
-          <th style="width: 58px;">Taxable Amt.</th>
-          <th style="width: 34px;">GST %</th>
-          <th style="width: 52px;">GST Amt</th>
-          <th style="width: 58px;">Total</th>
+          <th style="width: 28px;">Qty</th>
+          <th style="width: 28px;">UOM</th>
+          <th style="width: 52px;">Amount</th>
+          <th style="width: 55px;">Taxable Amt.</th>
+          <th style="width: 32px;">GST %</th>
+          <th style="width: 50px;">GST Amt</th>
+          <th style="width: 56px;">Total</th>
         </tr>
       </thead>
       <tbody>
@@ -169,6 +171,7 @@ function generateInvoiceBoxContent(order: Order): string {
         <tr style="font-weight: bold; background: #fafafa;">
           <td colspan="2" style="text-align: right;">TOTAL:</td>
           <td style="text-align: center;">${order.total_qty}</td>
+          <td></td>
           <td style="text-align: right;">₹${order.taxable_amount.toFixed(2)}</td>
           <td style="text-align: right;">₹${order.taxable_amount.toFixed(2)}</td>
           <td></td>

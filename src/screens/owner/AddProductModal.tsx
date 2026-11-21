@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useStore } from '../../context/StoreContext';
-import { CompanyDivision, GOPAL_CHIPS_HSN_OPTIONS } from '../../types';
+import { CompanyDivision, GOPAL_CHIPS_HSN_OPTIONS, ProductUom, UOM_OPTIONS } from '../../types';
 
 interface AddProductModalProps {
   visible: boolean;
@@ -30,6 +30,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [categoryId, setCategoryId] = useState<string>(defaultCategoryId || '');
   const [name, setName] = useState('');
   const [hsnCode, setHsnCode] = useState('');
+  const [uom, setUom] = useState<ProductUom>('box');
   const [rate, setRate] = useState('');
   const [stockQty, setStockQty] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,6 +99,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         category_id: categoryId,
         name: name.trim(),
         hsn_code: hsnCode.trim() || (effectiveCompany === 'Gopal Chips' ? '20052000' : '21069099'),
+        uom: uom,
         rate: numRate,
         stock_qty: numStock,
         gst_rate: 5.0, // Fixed 5% GST
@@ -219,6 +221,24 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 onChangeText={setHsnCode}
                 keyboardType="number-pad"
               />
+            </View>
+
+            {/* Unit of Measurement (UOM) Selector */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Select Unit of Measurement (UOM) *</Text>
+              <View style={styles.uomPillsRow}>
+                {UOM_OPTIONS.map((unit) => (
+                  <TouchableOpacity
+                    key={unit}
+                    style={[styles.uomPill, uom === unit && styles.uomPillActive]}
+                    onPress={() => setUom(unit)}
+                  >
+                    <Text style={[styles.uomPillText, uom === unit && styles.uomPillTextActive]}>
+                      {unit === 'box' ? '📦 Box' : unit === 'pkt' ? '🛍️ Packet (pkt)' : '📦 Case'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             {/* Rate & Initial Stock */}
@@ -361,6 +381,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 8,
+  },
+  uomPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+  },
+  uomPill: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uomPillActive: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
+  },
+  uomPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  uomPillTextActive: {
+    color: '#FFFFFF',
   },
   hsnPill: {
     flex: 1,

@@ -254,7 +254,7 @@ export const PunchOrderScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.priceContainer}>
-                  <Text style={styles.rateText}>₹{item.rate.toFixed(2)}</Text>
+                  <Text style={styles.rateText}>₹{item.rate.toFixed(2)} <Text style={{ fontSize: 11, fontWeight: 'normal', color: '#6B7280' }}>/ {item.uom || 'box'}</Text></Text>
                   <Text style={styles.gstNote}>+5% GST</Text>
                 </View>
               </View>

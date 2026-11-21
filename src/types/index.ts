@@ -42,11 +42,15 @@ export interface Category {
   created_at?: string;
 }
 
+export type ProductUom = 'box' | 'pkt' | 'case';
+export const UOM_OPTIONS: ProductUom[] = ['box', 'pkt', 'case'];
+
 export interface Product {
   id: string;
   category_id: string;
   name: string;
   hsn_code: string;
+  uom?: ProductUom | string; // Unit of measurement (box, pkt, case)
   rate: number; // Base selling rate per unit/box
   stock_qty: number; // Available inventory in godown
   gst_rate: number; // Default 5%
@@ -62,6 +66,7 @@ export interface OrderItem {
   product_name: string;
   category_name: string;
   hsn_code?: string;
+  uom?: ProductUom | string; // Unit of measurement (box, pkt, case)
   qty: number;
   rate: number;
   amount?: number;

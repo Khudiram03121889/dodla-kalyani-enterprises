@@ -51,6 +51,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
           name: oi.product_name,
           category_id: '',
           hsn_code: oi.hsn_code || '04029990',
+          uom: oi.uom || 'box',
           rate: oi.rate,
           stock_qty: 9999,
           gst_rate: oi.gst_rate || 5.0,
@@ -230,7 +231,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                       <View style={{ flex: 1 }}>
                         <Text style={styles.itemName}>{row.product.name}</Text>
                         <Text style={styles.itemCategory}>
-                          {matchedCategory?.name || 'Item'} &bull; ₹{row.product.rate.toFixed(2)} / unit
+                          {matchedCategory?.name || 'Item'} &bull; ₹{row.product.rate.toFixed(2)} / {row.product.uom || 'box'}
                         </Text>
                       </View>
 

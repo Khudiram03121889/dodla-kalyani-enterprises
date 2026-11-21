@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS dodla_products (
   category_id UUID REFERENCES dodla_categories(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
   hsn_code VARCHAR(20) DEFAULT '21069099',
+  uom VARCHAR(20) DEFAULT 'box',
   rate NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (rate >= 0),
   stock_qty INT NOT NULL DEFAULT 0 CHECK (stock_qty >= 0),
   gst_rate NUMERIC(5,2) NOT NULL DEFAULT 5.00 CHECK (gst_rate >= 0),
@@ -104,6 +105,7 @@ CREATE TABLE IF NOT EXISTS dodla_order_items (
   product_name TEXT NOT NULL,
   category_name TEXT NOT NULL,
   hsn_code VARCHAR(20),
+  uom VARCHAR(20) DEFAULT 'box',
   qty INT NOT NULL DEFAULT 1 CHECK (qty > 0),
   rate NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (rate >= 0),
   taxable_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (taxable_amount >= 0),
@@ -220,7 +222,7 @@ BEGIN
 
     -- Insert Order Item
     INSERT INTO dodla_order_items (
-      order_id, product_id, product_name, category_name, hsn_code,
+      order_id, product_id, product_name, category_name, hsn_code, uom,
       qty, rate, taxable_amount, gst_rate, gst_amount, total_amount, company
     ) VALUES (
       v_order_id,
@@ -228,6 +230,7 @@ BEGIN
       (v_item->>'product_name'),
       (v_item->>'category_name'),
       NULLIF(TRIM(v_item->>'hsn_code'), ''),
+      COALESCE(NULLIF(TRIM(v_item->>'uom'), ''), 'box'),
       v_qty,
       (v_item->>'rate')::numeric,
       (v_item->>'taxable_amount')::numeric,
@@ -304,6 +307,7 @@ CREATE TABLE IF NOT EXISTS public.gopal_products (
   category_id UUID NOT NULL REFERENCES public.gopal_categories(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   hsn_code VARCHAR(20) DEFAULT '20052000',
+  uom VARCHAR(20) DEFAULT 'box',
   rate NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (rate >= 0),
   stock_qty INT NOT NULL DEFAULT 0 CHECK (stock_qty >= 0),
   gst_rate NUMERIC(5,2) NOT NULL DEFAULT 5.00 CHECK (gst_rate >= 0),
@@ -348,6 +352,7 @@ CREATE TABLE IF NOT EXISTS public.gopal_order_items (
   product_name TEXT NOT NULL,
   category_name TEXT NOT NULL,
   hsn_code VARCHAR(20),
+  uom VARCHAR(20) DEFAULT 'box',
   qty INT NOT NULL DEFAULT 1 CHECK (qty >= 0),
   rate NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (rate >= 0),
   taxable_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (taxable_amount >= 0),
@@ -424,7 +429,7 @@ BEGIN
     v_qty := GREATEST(1, (v_item->>'qty')::int);
 
     INSERT INTO gopal_order_items (
-      order_id, product_id, product_name, category_name, hsn_code,
+      order_id, product_id, product_name, category_name, hsn_code, uom,
       qty, rate, taxable_amount, gst_rate, gst_amount, total_amount
     ) VALUES (
       v_order_id,
@@ -432,6 +437,7 @@ BEGIN
       (v_item->>'product_name'),
       (v_item->>'category_name'),
       NULLIF(TRIM(v_item->>'hsn_code'), ''),
+      COALESCE(NULLIF(TRIM(v_item->>'uom'), ''), 'box'),
       v_qty,
       (v_item->>'rate')::numeric,
       (v_item->>'taxable_amount')::numeric,

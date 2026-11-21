@@ -324,6 +324,20 @@ export const InventoryScreen: React.FC = () => {
                             </Text>
                           </View>
                         )}
+                        <View
+                          style={{
+                            backgroundColor: '#F3F4F6',
+                            borderWidth: 1,
+                            borderColor: '#E5E7EB',
+                            paddingHorizontal: 6,
+                            paddingVertical: 1,
+                            borderRadius: 4,
+                          }}
+                        >
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#374151', textTransform: 'uppercase' }}>
+                            {item.uom || 'box'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
 
@@ -348,14 +362,14 @@ export const InventoryScreen: React.FC = () => {
                             : styles.stockOkText,
                         ]}
                       >
-                        Stock: {item.stock_qty}
+                        Stock: {item.stock_qty} {item.uom || 'box'}
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.cardBottom}>
                     <View>
-                      <Text style={styles.priceText}>₹{item.rate.toFixed(2)}</Text>
+                      <Text style={styles.priceText}>₹{item.rate.toFixed(2)} <Text style={{ fontSize: 12, fontWeight: 'normal', color: '#6B7280' }}>/ {item.uom || 'box'}</Text></Text>
                       <Text style={styles.gstTag}>Rate + 5% GST</Text>
                     </View>
 
