@@ -160,6 +160,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ]);
 
         // Process Dodla
+        let normDProds: Product[] = [];
         if (dRoutesRes.data && !dRoutesRes.error) {
           const normDRoutes: Route[] = dRoutesRes.data.map((r: any) => ({ ...r, company: 'Dodla' as CompanyDivision }));
           setDodlaRoutes(normDRoutes);
@@ -176,7 +177,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           await AsyncStorage.setItem(STORAGE_KEYS.DODLA_CATEGORIES, JSON.stringify(normDCats));
         }
         if (dProdsRes.data && !dProdsRes.error) {
-          const normDProds: Product[] = dProdsRes.data.map((p: any) => ({ ...p, uom: p.uom || 'box', company: 'Dodla' as CompanyDivision }));
+          normDProds = dProdsRes.data.map((p: any) => ({ ...p, uom: p.uom || 'box', company: 'Dodla' as CompanyDivision }));
           setDodlaProducts(normDProds);
           await AsyncStorage.setItem(STORAGE_KEYS.DODLA_PRODUCTS, JSON.stringify(normDProds));
         }
@@ -184,13 +185,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const normDOrders: Order[] = dOrdersRes.data.map((o: any) => ({
             ...o,
             company: 'Dodla' as CompanyDivision,
-            items: (o.items || []).map((it: any) => ({ ...it, uom: it.uom || 'box', company: 'Dodla' as CompanyDivision })),
+            items: (o.items || []).map((it: any) => {
+              const matchedProd = normDProds.find((p: Product) => p.id === it.product_id);
+              return {
+                ...it,
+                uom: (matchedProd?.uom || it.uom || 'box').toLowerCase(),
+                company: 'Dodla' as CompanyDivision,
+              };
+            }),
           }));
           setDodlaOrders(normDOrders);
           await AsyncStorage.setItem(STORAGE_KEYS.DODLA_ORDERS, JSON.stringify(normDOrders));
         }
 
         // Process Gopal
+        let normGProds: Product[] = [];
         if (gRoutesRes.data && !gRoutesRes.error) {
           const normGRoutes: Route[] = gRoutesRes.data.map((r: any) => ({ ...r, company: 'Gopal Chips' as CompanyDivision }));
           setGopalRoutes(normGRoutes);
@@ -207,7 +216,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           await AsyncStorage.setItem(STORAGE_KEYS.GOPAL_CATEGORIES, JSON.stringify(normGCats));
         }
         if (gProdsRes.data && !gProdsRes.error) {
-          const normGProds: Product[] = gProdsRes.data.map((p: any) => ({ ...p, uom: p.uom || 'box', company: 'Gopal Chips' as CompanyDivision }));
+          normGProds = gProdsRes.data.map((p: any) => ({ ...p, uom: p.uom || 'box', company: 'Gopal Chips' as CompanyDivision }));
           setGopalProducts(normGProds);
           await AsyncStorage.setItem(STORAGE_KEYS.GOPAL_PRODUCTS, JSON.stringify(normGProds));
         }
@@ -215,7 +224,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const normGOrders: Order[] = gOrdersRes.data.map((o: any) => ({
             ...o,
             company: 'Gopal Chips' as CompanyDivision,
-            items: (o.items || []).map((it: any) => ({ ...it, uom: it.uom || 'box', company: 'Gopal Chips' as CompanyDivision })),
+            items: (o.items || []).map((it: any) => {
+              const matchedProd = normGProds.find((p: Product) => p.id === it.product_id);
+              return {
+                ...it,
+                uom: (matchedProd?.uom || it.uom || 'box').toLowerCase(),
+                company: 'Gopal Chips' as CompanyDivision,
+              };
+            }),
           }));
           setGopalOrders(normGOrders);
           await AsyncStorage.setItem(STORAGE_KEYS.GOPAL_ORDERS, JSON.stringify(normGOrders));
@@ -725,11 +741,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     let orderId = generateUUID();
 
     const currentCategories = target === 'Gopal Chips' ? gopalCategories : dodlaCategories;
+    const currentProducts = target === 'Gopal Chips' ? gopalProducts : dodlaProducts;
     const orderItems: OrderItem[] = params.items.map((item) => {
       const lineTaxable = Number((item.qty * item.product.rate).toFixed(2));
       const lineGst = Number(((lineTaxable * (item.product.gst_rate || 5.0)) / 100).toFixed(2));
       const matchedCat = currentCategories.find((c) => c.id === item.product.category_id);
       const effectiveHsn = item.product.hsn_code?.trim() || matchedCat?.hsn_code?.trim() || (target === 'Gopal Chips' ? '20052000' : '22029990');
+      const matchedProd = currentProducts.find((p) => p.id === item.product.id);
+      const effectiveUom = (matchedProd?.uom || item.product.uom || 'box').toLowerCase();
 
       return {
         id: generateUUID(),
@@ -738,7 +757,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         product_name: item.product.name,
         category_name: matchedCat?.name || 'General',
         hsn_code: effectiveHsn,
-        uom: item.product.uom || 'box',
+        uom: effectiveUom,
         qty: item.qty,
         rate: item.product.rate,
         amount: lineTaxable,

@@ -17,6 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Product, CompanyDivision } from '../../types';
 import { CategoryManagerModal } from './CategoryManagerModal';
 import { AddProductModal } from './AddProductModal';
+import { EditProductModal } from './EditProductModal';
 
 export const InventoryScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -33,6 +34,7 @@ export const InventoryScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [addProductModalVisible, setAddProductModalVisible] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Sync executive company when user loads
@@ -375,10 +377,17 @@ export const InventoryScreen: React.FC = () => {
 
                     <View style={styles.actionRow}>
                       <TouchableOpacity
+                        style={styles.editBtn}
+                        onPress={() => setEditProduct(item)}
+                      >
+                        <Text style={styles.editBtnText}>✏️ Edit</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
                         style={styles.restockBtn}
                         onPress={() => setRestockProduct(item)}
                       >
-                        <Text style={styles.restockBtnText}>📦 Restock / Adjust</Text>
+                        <Text style={styles.restockBtnText}>📦 Restock</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -473,6 +482,12 @@ export const InventoryScreen: React.FC = () => {
         onClose={() => setAddProductModalVisible(false)}
         defaultCategoryId={selectedCategoryId}
         targetCompany={isExecutive ? executiveCompany : (selectedCompany === 'ALL' ? 'Dodla' : selectedCompany)}
+      />
+
+      <EditProductModal
+        visible={!!editProduct}
+        product={editProduct}
+        onClose={() => setEditProduct(null)}
       />
     </View>
   );
@@ -681,6 +696,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  editBtn: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  editBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
   },
   restockBtn: {
     backgroundColor: '#EFF6FF',

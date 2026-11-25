@@ -162,7 +162,9 @@ DECLARE
   v_order_no text;
   v_invoice_no text;
   v_curr_stock int;
+  v_prod_uom varchar(20);
   v_company text;
+  v_prod_uom varchar(20);
 BEGIN
   v_company := COALESCE(NULLIF(TRIM(p_order->>'company'), ''), 'Dodla');
 
@@ -220,6 +222,12 @@ BEGIN
     END;
     v_qty := GREATEST(1, (v_item->>'qty')::int);
 
+    -- Fetch UOM from product if available
+    v_prod_uom := NULL;
+    IF v_product_id IS NOT NULL THEN
+      SELECT uom INTO v_prod_uom FROM dodla_products WHERE id = v_product_id;
+    END IF;
+
     -- Insert Order Item
     INSERT INTO dodla_order_items (
       order_id, product_id, product_name, category_name, hsn_code, uom,
@@ -230,7 +238,7 @@ BEGIN
       (v_item->>'product_name'),
       (v_item->>'category_name'),
       NULLIF(TRIM(v_item->>'hsn_code'), ''),
-      COALESCE(NULLIF(TRIM(v_item->>'uom'), ''), 'box'),
+      COALESCE(v_prod_uom, NULLIF(TRIM(v_item->>'uom'), ''), 'box'),
       v_qty,
       (v_item->>'rate')::numeric,
       (v_item->>'taxable_amount')::numeric,
@@ -376,6 +384,7 @@ DECLARE
   v_order_no text;
   v_invoice_no text;
   v_curr_stock int;
+  v_prod_uom varchar(20);
 BEGIN
   -- Shared sequential invoice numbering across Dodla & Gopal (KG for Gopal)
   v_invoice_no := 'KG-2627-' || lpad(nextval('shared_invoice_no_seq')::text, 6, '0');
@@ -428,6 +437,12 @@ BEGIN
     END;
     v_qty := GREATEST(1, (v_item->>'qty')::int);
 
+    -- Fetch UOM from product if available
+    v_prod_uom := NULL;
+    IF v_product_id IS NOT NULL THEN
+      SELECT uom INTO v_prod_uom FROM gopal_products WHERE id = v_product_id;
+    END IF;
+
     INSERT INTO gopal_order_items (
       order_id, product_id, product_name, category_name, hsn_code, uom,
       qty, rate, taxable_amount, gst_rate, gst_amount, total_amount
@@ -437,7 +452,7 @@ BEGIN
       (v_item->>'product_name'),
       (v_item->>'category_name'),
       NULLIF(TRIM(v_item->>'hsn_code'), ''),
-      COALESCE(NULLIF(TRIM(v_item->>'uom'), ''), 'box'),
+      COALESCE(v_prod_uom, NULLIF(TRIM(v_item->>'uom'), ''), 'box'),
       v_qty,
       (v_item->>'rate')::numeric,
       (v_item->>'taxable_amount')::numeric,

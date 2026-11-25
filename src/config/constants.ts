@@ -2,7 +2,7 @@ export const COMPANY_DETAILS = {
   name: 'KALYANI ENTERPRISES',
   addressLine1: 'D NO 843/1 WARD NO 03.,',
   addressLine2: 'BALLARI, KARNATAKA - 583101',
-  phone: '9980723548',
+  phone: '9900426623',
   gstin: '29EMLPM3821E1ZW',
   fssai: '20250930107794088',
   placeOfSupply: 'KARNATAKA',

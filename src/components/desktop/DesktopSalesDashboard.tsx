@@ -894,7 +894,8 @@ export const DesktopSalesDashboard: React.FC = () => {
                     <View style={styles.sheetThRow}>
                       <Text style={[styles.sheetTh, { width: 35 }]}>#</Text>
                       <Text style={[styles.sheetTh, { flex: 2 }]}>Product Description</Text>
-                      <Text style={[styles.sheetTh, { width: 50, textAlign: 'center' }]}>Qty</Text>
+                      <Text style={[styles.sheetTh, { width: 45, textAlign: 'center' }]}>Qty</Text>
+                      <Text style={[styles.sheetTh, { width: 45, textAlign: 'center' }]}>UOM</Text>
                       <Text style={[styles.sheetTh, { width: 70, textAlign: 'right' }]}>Rate (₹)</Text>
                       <Text style={[styles.sheetTh, { width: 70, textAlign: 'right' }]}>Taxable</Text>
                       <Text style={[styles.sheetTh, { width: 45, textAlign: 'center' }]}>GST%</Text>
@@ -907,7 +908,10 @@ export const DesktopSalesDashboard: React.FC = () => {
                         <Text style={[styles.sheetTd, { flex: 2, fontWeight: '600' }]}>
                           {it.product_name} ({it.hsn_code || getCategoryHsn(it.category_name)})
                         </Text>
-                        <Text style={[styles.sheetTd, { width: 50, textAlign: 'center' }]}>{it.qty}</Text>
+                        <Text style={[styles.sheetTd, { width: 45, textAlign: 'center' }]}>{it.qty}</Text>
+                        <Text style={[styles.sheetTd, { width: 45, textAlign: 'center', fontWeight: '700', textTransform: 'uppercase', fontSize: 10 }]}>
+                          {it.uom || 'box'}
+                        </Text>
                         <Text style={[styles.sheetTd, { width: 70, textAlign: 'right' }]}>{it.rate.toFixed(2)}</Text>
                         <Text style={[styles.sheetTd, { width: 70, textAlign: 'right' }]}>{it.taxable_amount.toFixed(2)}</Text>
                         <Text style={[styles.sheetTd, { width: 45, textAlign: 'center' }]}>{it.gst_rate}%</Text>

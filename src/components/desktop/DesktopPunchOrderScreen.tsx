@@ -398,6 +398,9 @@ export const DesktopPunchOrderScreen: React.FC = () => {
                       </View>
                       <View style={styles.rateBadge}>
                         <Text style={styles.rateBadgeText}>₹{p.rate.toFixed(2)}</Text>
+                        <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', textAlign: 'center' }}>
+                          / {p.uom || 'box'}
+                        </Text>
                       </View>
                     </View>
 
@@ -485,7 +488,7 @@ export const DesktopPunchOrderScreen: React.FC = () => {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cartItemName}>{product.name}</Text>
                       <Text style={styles.cartItemSub}>
-                        {qty} × ₹{product.rate.toFixed(2)}
+                        {qty} {product.uom || 'box'} × ₹{product.rate.toFixed(2)}
                       </Text>
                     </View>
                     <Text style={styles.cartItemTotal}>

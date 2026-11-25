@@ -16,6 +16,7 @@ import { Product, Category, CompanyDivision } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { CategoryManagerModal } from '../../screens/owner/CategoryManagerModal';
 import { AddProductModal } from '../../screens/owner/AddProductModal';
+import { EditProductModal } from '../../screens/owner/EditProductModal';
 
 export const DesktopInventoryScreen: React.FC = () => {
   const { user, role } = useAuth();
@@ -34,6 +35,7 @@ export const DesktopInventoryScreen: React.FC = () => {
   // Modals
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [addProductModalVisible, setAddProductModalVisible] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [restockProduct, setRestockProduct] = useState<Product | null>(null);
   const [restockAdjustment, setRestockAdjustment] = useState('');
 
@@ -319,15 +321,16 @@ export const DesktopInventoryScreen: React.FC = () => {
           <View style={styles.thRow}>
             <Text style={[styles.th, { width: 45 }]}>#</Text>
             <Text style={[styles.th, { flex: 2 }]}>Product Name</Text>
-            <Text style={[styles.th, { width: 100, textAlign: 'center' }]}>Division</Text>
-            <Text style={[styles.th, { width: 140 }]}>Category</Text>
-            <Text style={[styles.th, { width: 100 }]}>HSN Code</Text>
-            <Text style={[styles.th, { width: 110, textAlign: 'right' }]}>Rate (₹)</Text>
-            <Text style={[styles.th, { width: 80, textAlign: 'center' }]}>GST %</Text>
-            <Text style={[styles.th, { width: 110, textAlign: 'center' }]}>Stock Qty</Text>
-            <Text style={[styles.th, { width: 120, textAlign: 'center' }]}>Stock Status</Text>
+            <Text style={[styles.th, { width: 95, textAlign: 'center' }]}>Division</Text>
+            <Text style={[styles.th, { width: 130 }]}>Category</Text>
+            <Text style={[styles.th, { width: 95 }]}>HSN Code</Text>
+            <Text style={[styles.th, { width: 75, textAlign: 'center' }]}>UOM</Text>
+            <Text style={[styles.th, { width: 105, textAlign: 'right' }]}>Rate (₹)</Text>
+            <Text style={[styles.th, { width: 75, textAlign: 'center' }]}>GST %</Text>
+            <Text style={[styles.th, { width: 105, textAlign: 'center' }]}>Stock Qty</Text>
+            <Text style={[styles.th, { width: 115, textAlign: 'center' }]}>Stock Status</Text>
             <Text style={[styles.th, { width: 170, textAlign: 'center' }]}>Quick Adjust</Text>
-            <Text style={[styles.th, { width: 80, textAlign: 'center' }]}>Action</Text>
+            <Text style={[styles.th, { width: 120, textAlign: 'center' }]}>Action</Text>
           </View>
 
           {/* Rows */}
@@ -373,26 +376,49 @@ export const DesktopInventoryScreen: React.FC = () => {
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.tdText, { width: 140 }]} numberOfLines={1}>
+                  <Text style={[styles.tdText, { width: 130 }]} numberOfLines={1}>
                     {categories.find((c) => c.id === p.category_id)?.name || '-'}
                   </Text>
-                  <Text style={[styles.tdText, { width: 100 }]}>{p.hsn_code || '-'}</Text>
-                  <Text style={[styles.tdRate, { width: 110, textAlign: 'right' }]}>
+                  <Text style={[styles.tdText, { width: 95 }]}>{p.hsn_code || '-'}</Text>
+                  <View style={{ width: 75, alignItems: 'center' }}>
+                    <View
+                      style={{
+                        backgroundColor: '#F1F5F9',
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 4,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: '700',
+                          color: '#334155',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {p.uom || 'box'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.tdRate, { width: 105, textAlign: 'right' }]}>
                     ₹{p.rate.toFixed(2)}
                   </Text>
-                  <Text style={[styles.tdText, { width: 80, textAlign: 'center' }]}>
+                  <Text style={[styles.tdText, { width: 75, textAlign: 'center' }]}>
                     {p.gst_rate}%
                   </Text>
                   <Text
                     style={[
                       styles.tdStockQty,
-                      { width: 110, textAlign: 'center' },
+                      { width: 105, textAlign: 'center' },
                       isOut ? styles.stockOutText : isLow ? styles.stockLowText : null,
                     ]}
                   >
                     {p.stock_qty} units
                   </Text>
-                  <View style={{ width: 120, alignItems: 'center' }}>
+                  <View style={{ width: 115, alignItems: 'center' }}>
                     <View
                       style={[
                         styles.statusBadge,
@@ -448,7 +474,21 @@ export const DesktopInventoryScreen: React.FC = () => {
                       <Text style={styles.restockTriggerText}>Custom</Text>
                     </TouchableOpacity>
                   </View>
-                  <View style={{ width: 80, alignItems: 'center' }}>
+                  <View
+                    style={{
+                      width: 120,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <TouchableOpacity
+                      style={styles.editBtn}
+                      onPress={() => setEditProduct(p)}
+                    >
+                      <Text style={styles.editBtnText}>✏️ Edit</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.deleteBtn}
                       onPress={() => handleDelete(p)}
@@ -530,6 +570,15 @@ export const DesktopInventoryScreen: React.FC = () => {
           visible={addProductModalVisible}
           onClose={() => setAddProductModalVisible(false)}
           targetCompany={isExecutive ? executiveCompany : (selectedCompany === 'ALL' ? 'Dodla' : selectedCompany)}
+        />
+      )}
+
+      {/* Edit Product Modal */}
+      {editProduct && (
+        <EditProductModal
+          visible={!!editProduct}
+          product={editProduct}
+          onClose={() => setEditProduct(null)}
         />
       )}
     </View>
@@ -798,6 +847,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#475569',
+  },
+  editBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  editBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1D4ED8',
   },
   deleteBtn: {
     padding: 6,
